@@ -1,0 +1,17 @@
+#!/bin/bash
+
+if [ "$1" != "ls" ]; then
+    exit 0
+fi
+
+if [ "$2" = "-development" ]; then
+    cat data/dump1
+elif [ "$2" = "-area" ]; then
+    cat data/dump2
+elif [ "$2" = "-to" ]; then
+    sleep 30
+fi
+
+if [ "${3:-}" = "-err" ]; then
+    exit 1
+fi
