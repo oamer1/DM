@@ -81,6 +81,7 @@ class Process(object):
         self._lock = threading.Lock()
         self.read_running = False
         self.stream = False
+        self.run_process = True
 
     def read_output(self) -> str:
         """runs a separate thread reading stdout from the process"""
@@ -96,8 +97,6 @@ class Process(object):
                 return
             output += data
             if output.endswith(self.prompt) or (self.stream and output.endswith("\n")):
-                if "Logging to " in output:
-                    LOGGER.info(output)
                 self.queue.put(output)
                 output = ""
         self.read_running = False
@@ -179,38 +178,41 @@ class Process(object):
             for var in self.env:
                 sub_env[var] = self.env[var]
             LOGGER.debug(f"Running the process {self.command}")
-            self.process = subprocess.Popen(
-                self.command,
-                cwd=self.cwd,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                shell=True,
-                env=sub_env,
-            )
-            self.queue = queue.Queue()
-            self.thread = threading.Thread(target=self.read_output)
-            self.thread.daemon = True
-            self.thread.start()
-            if self.start_cmd:
+            if self.run_process:
+                self.process = subprocess.Popen(
+                    self.command,
+                    cwd=self.cwd,
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    shell=True,
+                    env=sub_env,
+                )
+                self.queue = queue.Queue()
+                self.thread = threading.Thread(target=self.read_output)
+                self.thread.daemon = True
+                self.thread.start()
+            if self.run_process and self.start_cmd:
                 self.send_command(self.start_cmd)
             yield
         except:
             # TODO - how to capture the error?
             # TODO - anything to back out
             LOGGER.exception(f"Exception from run_shell")
-            if self.end_cmd:
+            if self.run_process and self.end_cmd:
                 self.send_command(self.end_cmd)
             raise
         else:
             LOGGER.debug(f"Shutting down")
-            if self.end_cmd:
+            if self.run_process and self.end_cmd:
                 self.send_command(self.end_cmd)
 
     # TODO - add timeout
     def wait_for_shell(self) -> bool:
         """called within the run_shell context manager to wait for the initial prompt"""
         try:
+            if not self.run_process:
+                return True
             resp = self.get_response(self.init_timeout)
             return True
         except queue.Empty:
