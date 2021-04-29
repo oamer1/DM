@@ -502,25 +502,14 @@
         </values>
     </Make_Release>
 
-    <!--
-        The Send_Email section contains information reagarding sending out emailRun_Regress section contains information used by the Run
-        Regress script.  The possible settings are:
-            email_regress_notify - email address to use to notify about the
-                release being ready
-            stdout_flag - when 1 display results to STDOUT
-            regression_list - location of the regression XML file
-            simulation_threads - number of sims to run in parallel
-            regress_root_dir - root directory name for the regression results
-    -->
-    
-    <Send_Email>
+    <wtf_email>
 	<values>
 	    <anon
-		email_notify="xyz@xyz.com"
+		email_notify="mgajjar@qti.qualcomm.com"
 	    />
 	</values>
 
-    </Send_Email>
+    </wtf_email>
 
     <!--
         The Run_Regress section contains information used by the Run
