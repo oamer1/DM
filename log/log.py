@@ -48,16 +48,20 @@ def configure(
         filemode="a",
         format=format,
         datefmt=datefmt,
-        level=level,
+        level=logging.DEBUG,
     )
 
     # Rotate logs after 20 runs
     handler = logging.handlers.RotatingFileHandler(filename, backupCount=20)
+    handler.setLevel(logging.DEBUG)
+    file_formatter = logging.Formatter(fmt=format, datefmt=datefmt)
+    handler.setFormatter(file_formatter)
     ROOT.addHandler(handler)
     handler.doRollover()
 
     # Log both to file and console
     console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
     console_formatter = logging.Formatter(fmt="%(levelname)s: %(message)s")
     console_handler.setFormatter(console_formatter)
     ROOT.addHandler(console_handler)
@@ -80,7 +84,7 @@ def cli_arguments() -> None:
     Called to log invocation arguments in CLI mode (e.g. where __name__ == "__main__").
     """
     cli = logging.getLogger("__main__")
-    cli.info("Arguments: %s", " ".join(sys.argv))
+    cli.debug("Arguments: %s", " ".join(sys.argv))
 
 
 def call_arguments() -> None:
