@@ -1,0 +1,558 @@
+<Defaults>
+    <values>
+       <anon 
+          Project="REFERENCE_1.0" 
+          DV_lead="wan.verif"
+       />
+    </values>
+    <Model_Code>
+        <values>
+            <anon tmax_outside_module="0" timescale="1ns/1fs" add_xml_tags_at_end="1"/>
+        </values>
+        <Header_Files>
+            <anon file="tb_defines.v" order="1" />
+            <anon file="qc_asserts.vh" order="2" />
+        </Header_Files>
+    </Model_Code>
+    <Ports>
+        <values>
+          <anon verbose="0" port_type="AWI" parse_input_model="1" library_binding="rfraff_AWI"/>
+        </values>
+        
+        <Supplies>
+          <anon supply="VDDAL"   loLimit="`WAN_VDDAL_MIN"   hiLimit="`WAN_VDDAL_MAX"   />
+          <anon supply="VDDAM"   loLimit="`WAN_VDDAM_MIN"   hiLimit="`WAN_VDDAM_MAX"   />
+          <anon supply="VDDALM"  loLimit="`WAN_VDDALM_MIN"  hiLimit="`WAN_VDDALM_MAX"  />
+          <anon supply="VDDAH"   loLimit="`WAN_VDDAH_MIN"   hiLimit="`WAN_VDDAH_MAX"   />
+          <anon supply="VDDAMH"  loLimit="`WAN_VDDAMH_MIN"  hiLimit="`WAN_VDDAMH_MAX"  />
+          <anon supply="VDDALMH" loLimit="`WAN_VDDALMH_MIN" hiLimit="`WAN_VDDALMH_MAX" />
+        </Supplies>
+        <IBiases>
+          <anon bias="5U"        loLimit="`IB_5U_MIN"     hiLimit="`IB_5U_MAX"     />
+          <anon bias="10U"       loLimit="`IB_10U_MIN"    hiLimit="`IB_10U_MAX"    />
+          <anon bias="12p5U"     loLimit="`IB_12p5U_MIN"  hiLimit="`IB_12p5U_MAX"  />
+          <anon bias="25U"       loLimit="`IB_25U_MIN"    hiLimit="`IB_25U_MAX"    />
+          <anon bias="50U"       loLimit="`IB_50U_MIN"    hiLimit="`IB_50U_MAX"    />
+          <anon bias="5U_neg"    loLimit="-`IB_5U_MAX"    hiLimit="-`IB_5U_MIN"    />
+          <anon bias="10U_neg"   loLimit="-`IB_10U_MAX"   hiLimit="-`IB_10U_MIN"   />
+          <anon bias="12p5U_neg" loLimit="-`IB_12p5U_MAX" hiLimit="-`IB_12p5U_MIN" />
+          <anon bias="25U_neg"   loLimit="-`IB_25U_MAX"   hiLimit="-`IB_25U_MIN"   />
+          <anon bias="50U_neg"   loLimit="-`IB_50U_MAX"   hiLimit="-`IB_50U_MIN"   />
+        </IBiases>
+        <AWI>
+          <values>
+            <anon parse_input_model="1" parse_input_health_chk="1" out_limits="1" in_activate="0" />
+          </values>
+          <Digital>
+              <values>
+                  <anon comment="??? enter description ???"/>
+              </values>
+          </Digital>
+          <Ground>
+              <values>
+                  <anon comment="ground"/>
+              </values>
+          </Ground>
+          <NOCONN>
+              <values>
+                  <anon comment="??? enter description ???"/>
+              </values>
+          </NOCONN>
+          <IBias>
+              <values>
+                  <anon comment="??? bias current, ###uA nominal, ### to ###uA range" hiLimit="100.0e-6" loLimit="1.0e-6"/>
+              </values>
+          </IBias>
+          <Iin>
+              <values>
+                  <anon comment="??? enter description ???"/>
+              </values>
+          </Iin>
+          <Iin_BB>
+              <values>
+                  <anon comment="??? enter description ???"/>
+              </values>
+          </Iin_BB>
+          <Iin_RF> 
+            <values> 
+              <anon ENFBW="0" comment="??? enter description ???"/> 
+            </values> 
+          </Iin_RF>         
+          <Iout>
+              <values>
+                  <anon comment="??? enter description ???"/>
+              </values>
+          </Iout>
+          <Iout_BB>
+              <values>
+                  <anon comment="??? enter description ???"/>
+              </values>
+          </Iout_BB>
+          <Iout_RF> 
+            <values> 
+              <anon comment="??? enter description ???"/> 
+            </values> 
+          </Iout_RF> 
+          <Supply>
+              <values>
+                  <anon comment="??? supply, ###V nominal, ### to ###V range"/>
+              </values>
+          </Supply>
+          <VBias>
+              <values>
+                  <anon comment="??? bias voltage, ###V nominal, ### to ###V range" hiLimit="2.1" loLimit="0.1"/>
+              </values>
+          </VBias>
+          <Vin>
+              <values>
+                  <anon comment="??? enter description ???"/>
+              </values>
+          </Vin>
+          <Vin_BB>
+              <values>
+                  <anon comment="??? enter description ???"/>
+              </values>
+          </Vin_BB>
+          <Vin_RF> 
+            <values> 
+              <anon ENFBW="0" comment="??? enter description ???"/> 
+            </values> 
+          </Vin_RF> 
+          <Vout>
+              <values>
+                  <anon comment="??? enter description ???"/>
+              </values>
+          </Vout>
+          <Vout_BB>
+              <values>
+                  <anon comment="??? enter description ???"/>
+              </values>
+          </Vout_BB>
+          <Vout_RF> 
+            <values> 
+              <anon comment="??? enter description ???"/> 
+            </values> 
+          </Vout_RF> 
+        </AWI>
+        <AMS>
+            <values>
+                <anon in_limits="1" out_limits="1" />
+            </values>
+        </AMS>
+    </Ports>
+    <Misc>
+        <Asserts>
+            <values>
+                <anon type="QcAsserts" check_scan="1" disable_when_always_on="1" />
+            </values>
+        </Asserts>
+    </Misc>
+    <Wizard> 
+      <values> 
+        <anon tmpdir="/tmp" use_ncbrowse="1" /> 
+      </values> 
+    </Wizard> 
+  <Logger> 
+    <values> 
+    </values> 
+  </Logger> 
+  <GUI> 
+    <values> 
+      <anon 
+        window_geometry="1310x518"
+        listbox_height="20"
+        listbox_width="130"
+        comment_width="120"
+        text_box_width="140"
+        text_box_height="16"
+        entry_width="60"
+        entry_height="5"
+        popups_at_origin="1" 
+      /> 
+    </values> 
+  </GUI> 
+  <Robin>
+      <values>
+          <anon
+              default_pstate="P0"
+              exclude_libs="QC QCcommon basic"
+              exclude_views="rtl vlog_open vlog_short functional vlog_empty structural behavioral"
+          />
+      </values>
+  </Robin>
+
+  <Simv_if>
+      <values>
+          <anon
+              stop_modules="tb_top,IdealSwitch,wmss_core,reg_dtop9,reg_dtop1,reg_dtop2,reg_dtop3,gnss_dtop_wrap,reg_dtop8,reg_dtop10,tac_pll_tpm_dtop,tac_pll_dtop,tac_icon_dtop"
+              max_level="300"
+              create_db="1"
+              create_log="0"
+              enable_vvw="0"
+          />
+      </values>
+  </Simv_if>
+
+  <Simvision>
+      <values>
+          <anon
+              vdb_add_user="1"
+              vdb_add_pid="0"
+              disable_xact_complex="1"
+              disable_launch_batman="1"
+              disable_xy_plot="1"
+              hwprobe_description="1"
+              help_email="wan.verif"
+              help_admin="wan.verif"
+              help_project="Reference"
+              jira_project="Reference_1.0"
+              jira_assignee="wan.verif"
+              jira_enable="1"
+              jira_site_name="jirahdw@qualcomm.com"
+              jira_project_name="WANVERIF"
+              jira_submit_by_email="1"
+              jira_components="Model Sequence Testbench"
+              jira_issue_type="Bug {New Feature} Task Improvement"
+              jira_priority="P1 P2 P3 P4 P5"
+          />
+      </values>
+  </Simvision>
+
+    <Netlists>
+        <values>
+            <anon
+                name="RTL"
+                enable="1"
+                config_lib="chip_top_sim"
+                config_cell="chip_top_pkg_tb"
+                config_name="config_p0"
+                target="REFERENCE_CHIP_TOP_rtl.vams"
+                textInputs="rtl_textInputs"
+                amsbind="rtl_amsbind.scs"
+                vnetlist="REFERENCE_CHIP_TOP_rtl.sv"
+                incTextInputs="1"
+                vcat_options="-a -r -if -lib"
+            />
+            <anon
+                name="GATES"
+                enable="0"
+                config_lib="CHIP_TOP_SIM"
+                config_cell="top_configs"
+                config_name="config_gates"
+                target="REFERENCE_CHIP_TOP_gates.vams"
+                textInputs="gates_textInputs"
+                amsbind="gates_amsbind.scs"
+            />
+            <anon
+                name="GATES_PA"
+                enable="0"
+                config_lib="CHIP_TOP_SIM"
+                config_cell="top_configs"
+                config_name="config_gates_pa"
+                target="REFERENCE_CHIP_TOP_gates_pa.vams"
+                textInputs="gates_pa_textInputs"
+                amsbind="gates_pa_amsbind.scs"
+            />
+            <anon
+                name="DC"
+                enable="0"
+                config_lib="CHIP_TOP_SIM"
+                config_cell="top_configs"
+                config_name="config_dc"
+                target="REFERENCE_CHIP_TOP_dc.vams"
+                textInputs="dc_textInputs"
+                amsbind="dc_amsbind.scs"
+                vnetlist="REFERENCE_CHIP_TOP_dc.v"
+                incTextInputs="1"
+                vcat_options="-a -r -if -lib"
+            />
+            <anon
+                name="STA"
+                enable="0"
+                config_lib="CHIP_TOP"
+                config_cell="CHIP_TOP"
+                config_name="config_sta"
+                target="REFERENCE_CHIP_TOP_sta.vams"
+                textInputs="sta_textInputs"
+                amsbind="sta_amsbind.scs"
+                vnetlist="REFERENCE_CHIP_TOP_sta.v"
+                incTextInputs="1"
+                vcat_options="-a -r -lib"
+            />
+        </values>
+    </Netlists>
+
+    <PostScripts>
+    </PostScripts>
+
+    <Simulations>
+    </Simulations>
+
+    <!--
+        The Launch_Simulation section contains information used by the Launch
+        Simulator script.  The possible settings are:
+            ignore_pwr_define - defines to add when forcing supply and gnd to 1
+            scan_mode_define - defines to add when enabling scan mode
+            lsf_memory - memory for LSF queue (default is 4000)
+            default_queue - default queue to use (default is rfa_design)
+                vfiles="verif/tb/src/cds_alias.v"
+    -->
+    <Launch_Simulation>
+        <values>
+            <anon
+                irun_sim_args=""
+                default_mode="RTL"
+                default_queue="priority"
+                sim_script="verif_modules/rfa_modelers/perl/wan/run_nc_sim.csh"                
+                add_cds_globals="0"
+                irun_files="userDisciplines.vams cds.lib"
+                sim_license="Xcelium_Single_Core"
+                sim_lic_num="1"
+                lsf_select="sles11"
+            />
+        </values>
+    </Launch_Simulation>
+
+    <Simulation_Modes>
+        <values>
+            <anon
+                name="RTL"
+                sim_root_dir="config_rtl"
+                options_file="${SIM_OPTIONS_HW_RTL}"
+                chip_top_nl="REFERENCE_CHIP_TOP_rtl"
+                chip_top_files="rtl_textInputs"
+                chip_top_bind="rtl_amsbind.scs"
+                vnetlist="REFERENCE_CHIP_TOP_rtl"
+                top_defines="USE_RUNTIME_SIM_ARGS  DISABLE_SELF_DESTRUCT_ALERT DISABLE_MAX_FC_TIMER DISABLE_RFFE_PARITY_ERR_CHK"
+                tb_top_cell="CHIP_TOP_PKG_tb"
+                lsf_memory="8000"
+                prefix="soc"
+            />
+            <anon
+                name="GATES"
+                sim_root_dir="config_gates"
+                options_file="${DSGN_PROJ}/verif/simopts/sim_options_chip_top_gates.f"
+                irun_sim_args="-input ${DSGN_PROJ}/release/soc_gates_force.tcl"
+                chip_top_nl="REFERENCE_CHIP_TOP_gates"
+                chip_top_files="gates_textInputs"
+                chip_top_bind="gates_amsbind.scs"
+                vnetlist="REFERENCE_CHIP_TOP_gates"
+                top_defines="USE_RUNTIME_SIM_ARGS DISABLE_SELF_DESTRUCT_ALERT DISABLE_MAX_FC_TIMER"
+                tb_top_cell="CHIP_TOP_PKG_tb"
+                lsf_memory="32000"
+            />
+            <anon
+                name="GATES_PA"
+                sim_root_dir="config_gates_pa"
+                options_file="${DSGN_PROJ}/verif/simopts/sim_options_chip_top_gates_pa.f"
+                irun_sim_args="-input ${DSGN_PROJ}/release/soc_gates_pa_force.tcl"
+                chip_top_nl="REFERENCE_CHIP_TOP_gates_pa"
+                chip_top_files="gates_pa_textInputs"
+                chip_top_bind="gates_pa_amsbind.scs"
+                vnetlist="REFERENCE_CHIP_TOP_gates_pa"
+                top_defines="USE_RUNTIME_SIM_ARGS DISABLE_SELF_DESTRUCT_ALERT DISABLE_MAX_FC_TIMER"
+                tb_top_cell="CHIP_TOP_PKG_tb"
+                lsf_memory="64000"
+            />
+            <anon
+                name="DC"
+                sim_root_dir="config_dc"
+                options_file="${SIM_OPTIONS_HW_DC}"
+                irun_sim_args="-amsbind"
+                chip_top_nl="REFERENCE_CHIP_TOP_dc"
+                chip_top_files="dc_textInputs"
+                chip_top_bind="dc_amsbind.scs"
+                vnetlist="REFERENCE_CHIP_TOP_dc"
+                top_defines="USE_RUNTIME_SIM_ARGS ADD_WAN_SV_ENV "
+                tb_top_cell="CHIP_TOP_PKG_tb"
+                lsf_memory="16000"
+            />
+            <!--
+                name= <name for run_sim.csh -mode option>
+                sim_root_dir= <root dir name of the simulation output>
+                module_name= < TBD >			
+                sim_files_dir= < testbench file path relative to $DSGN_PROJ > 
+                options_file= < compile option file path relative to $DSGN_PROJ, or full path, env supported >	
+                chip_top_nl= < netlist file name, .vams extention will be appended automatically  > 
+                chip_top_files=""
+                chip_top_bind=""
+                vnetlist=""
+                top_defines="USE_RUNTIME_SIM_ARGS  DISABLE_SELF_DESTRUCT_ALERT  "
+                tb_top_cell= < top cell of the testbench >
+                lsf_memory="4000"		
+                
+            -->
+        </values>
+    </Simulation_Modes>
+
+    <!--
+        The Release section contains information used by the Release module.
+        The possible settings are:
+            chip_top_lib - default library that holds the chip top
+            chip_top_cell - default cell for the chip top
+            chip_top_simple_config - simple config view for the chip top
+                (if set to empty string, this view will not be netlisted)
+            ams_temp_lib - location of the ams_temp_lib relative to $DSGN_PROJ
+                (if set to the empty sting, the directory will not be cleared)
+            sim_test_index - test index for the test simulation
+            sim_file_index - file index for the test simulation
+            checkout_scan_cmd - command to scan for checked out files (default
+                is dssc ls -recursive -workspace -locked)
+            unmanaged_scan_cmd - command to scan for unmanaged files (default
+                is dssc ls -recursive -unmanaged
+            populate_cmd - command to populate the workspace (the default is
+                dssc hcm get -recursive -force
+            checkout_cmd - command used to check out files (the default is
+                dssc co -noc -lock
+            checkin_cmd - command used to check in files (the default is
+                dssc ci -new
+            net_check_cmd - command used to check the verilog netlist (default
+                is scripts/vcat.pl -a -e)
+            net_convert_cmd - command used to convert a Verilog-AMS netlist
+                into verilog (default is scripts/vcat.pl -a -f -r)
+            ssbi_xfer_file - location of the SSBI transfer file (default is
+                digital/include/kep_ssbi_transfer.v)
+            ssbi_xfer_cmd - command used to create the SSBI transfer file
+                (default is scripts/generate_ssbi_transfer.csh)
+            netlist_cmd - command used to generate an OSS netlist (default is
+                scripts/run_oss_netlist.csh)
+            html_log_root - default location to store the HTML report files
+                (default is ../logfiles)
+            sim_script - command used to run the test simulation (default is
+                ../rfa_modelers/perl/Batman/Launch_Simulation.pl)
+            sim_pass_string - string in the simulation logfile that indicates
+                that the simulation passed (default is "Simulation PASSED")
+            sim_fail_string - string in the simulation logfile that indicates
+                that the simulation failed (default is "Simulation FAILED")
+            email_notify - email address to use to notify about the completion
+                of the script
+            lsf_memory - memory for LSF queue (default is 4000)
+            default_queue - default queue to use (default is rfa_design)
+    -->
+    <Release>
+        <values>
+            <anon
+                netlist_launch_cmd="virtuoso -qc_memory 6000 -qc_64bit -qc_queue rfa_design -nograph -no_ver_check"
+                tb_top_cell="CHIP_TOP_PKG_tb"
+                add_version="0"
+                populate_cmd=""
+                checkout_scan_cmd=""
+                unmanaged_scan_cmd=""
+                dssc_multithread="1"
+                netlist_threads="1"
+                netlist_no_bsub="1"
+                local_sim_data="1"
+                sitr_workspace="1"
+                sim_files_dir="release"
+                probe_files_dir="sim_data/probe"
+                tcl_files_dir="sim_data/svcf"
+                release_dir="release"
+                release_root_dir="release_netlist"
+                html_log_root="release/logfiles"
+                net_convert_cmd="verif_modules/rfa_modelers/perl/vcat.pl"
+                ptag="18607.00.rfa"
+            />
+        </values>
+    </Release>
+
+    <!--
+        The Create_Release section contains information used by the Release module.
+        The possible settings are:
+            email_notify - email address to use to notify about the completion
+                of the script
+            lsf_memory - memory for LSF queue (default is 4000)
+            default_queue - default queue to use (default is rfa_design)
+    -->
+    <Create_Release>
+        <values>
+            <anon
+                email_notify="wan.verif"
+                email_subject="REFERENCE_1.0 Release Status"
+            />
+        </values>
+    </Create_Release>
+
+    <!--
+        The Make_Release section contains information used by the Make
+        Release script.  The possible settings are:
+            email_release_notify - email address to use to notify about the
+                release being ready
+            lsf_memory - memory for LSF queue (default is 4000)
+            default_queue - default queue to use (default is rfa_design)
+            tag_add_date="1"          - This one was already there, but you can set it to 0 to not add the date to the tag
+            tag_use_underbar="1"      - If set to 0, then a - will be used instead of _
+            tag_add_username="0"      - If set to 1, then the username will be appended to the end of the 
+
+    -->
+    <Make_Release>
+        <values>
+            <anon
+                email_notify="wan.verif"
+                email_release_notify="wan.verif"
+                email_sim_release_notify="wan.verif"
+                base_tag_str="REF_V100"
+                populate_tag="bsub -q priority dssc pop -rec -force -full -unify -version " 
+                populate_args=""     
+                cmd_prompt=""
+                rel_workspace_cmd="scripts/qcrf_relws_create.csh -b -t "
+                tag_add_date="0"     
+                tag_use_underbar="0" 
+                tag_add_username="1" 
+            />
+        </values>
+    </Make_Release>
+
+    <!--
+        The Send_Email section contains information reagarding sending out emailRun_Regress section contains information used by the Run
+        Regress script.  The possible settings are:
+            email_regress_notify - email address to use to notify about the
+                release being ready
+            stdout_flag - when 1 display results to STDOUT
+            regression_list - location of the regression XML file
+            simulation_threads - number of sims to run in parallel
+            regress_root_dir - root directory name for the regression results
+    -->
+    
+    <Send_Email>
+	<values>
+	    <anon
+		email_notify="xyz@xyz.com"
+	    />
+	</values>
+
+    </Send_Email>
+
+    <!--
+        The Run_Regress section contains information used by the Run
+        Regress script.  The possible settings are:
+            email_regress_notify - email address to use to notify about the
+                release being ready
+            stdout_flag - when 1 display results to STDOUT
+            regression_list - location of the regression XML file
+            simulation_threads - number of sims to run in parallel
+            regress_root_dir - root directory name for the regression results
+    -->
+    <Run_Regress>
+        <values>
+            <anon
+                email_regress_notify="wan.verif"
+                regression_list="./regress.xml"
+                regress_root_dir="REFERENCE_regress"
+                sim_script="scripts/run_sim.csh"
+            />
+        </values>
+    </Run_Regress>
+
+    <!--
+      This CSV_GUI section contains information used by csv_gui simvision plugin
+    -->
+    <CSV_GUI>
+      <values>
+         <anon
+            top_blk="$DSGN_PROJ/doc/scale/streamer.blk"
+            top_module="CHIP_TOP_PKG_tb"
+            dtop_csv = "$PROJECT_DIR/sim_data/csv/top/dtops.csv"
+         />
+      </values>
+    </CSV_GUI>    
+</Defaults>
