@@ -373,7 +373,7 @@ def pop_latest(dm, args: argparse.Namespace) -> int:
         mod_list = dm.get_sitr_update_list(args.mods)
         dm.populate_configs(args.mods, mod_list)
         # TODO - run voos
-        # TODO - send email
+        # TODO - send email(check submit command, if --noemail option given then, no email, by default send email)
     return 0
 
 
@@ -581,7 +581,7 @@ def setup_ws(dm, args: argparse.Namespace) -> int:
         dm.setup_shared_ws(args.mods)
     else:
         dm.stclc_populate_workspace()
-    # TODO - send email
+    # TODO - send email(check submit command, if --noemail option given then, no email, by default send email)
     return 0
 
 
@@ -750,7 +750,7 @@ def mk_release(dm, args: argparse.Namespace) -> int:
         LOGGER.info("Parsing %s to find email to notify...", str(fname))
         email = dm.parse_project_xml(fname)
         LOGGER.info("Using email: %s", email)
-
+# TODO - send email(Already implemented, need to modify with MIME basedd email)
     args.mod_list = dm.flat_release_submit(
         args.mods, args.snap, args.comment, email=email
     )
@@ -861,7 +861,7 @@ def int_release(dm, args: argparse.Namespace) -> int:
         LOGGER.info("Parsing %s to find email to notify...", str(fname))
         email = dm.parse_project_xml(fname)
         LOGGER.info("Using email: %s", email)
-
+# TODO - send email(Already implemented, need to modify with MIME basedd email)
     return dm.sitr_release(args.comment, email=email)
 
 
@@ -884,7 +884,7 @@ def release(dm, args: argparse.Namespace) -> int:
         fname = config_dir / "project.xml"
         LOGGER.info("Parsing %s to find email to notify...", str(fname))
         email = dm.parse_project_xml(fname)
-        LOGGER.info("Using email: %s", email)
+        LOGGER.info("Using email: %s", email) # TODO - send email(Already implemented, need to modify with MIME basedd email)
     return dm.sitr_release(args.comment, email=email)
 
 
