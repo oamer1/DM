@@ -11,6 +11,7 @@
 """
 import argparse
 import datetime
+from logging import Logger
 import os
 import re
 import smtplib
@@ -297,10 +298,13 @@ class Dsync(object):
         """check in files stored in a string"""
         if not comment:
             comment = input("Please provide a comment: ")
-        self.stream_command(f'ci -new {"-rec" if rec else ""} -comment "{comment}" {files}')
+        self.stream_command(
+            f'ci -new {"-rec" if rec else ""} -comment "{comment}" {files}'
+        )
         # TODO - how to check if this command passes.
-        #return self.stclc_check_resp_error(f"check in of {files}")
+        # return self.stclc_check_resp_error(f"check in of {files}")
         return False
+
     def stclc_populate(
         self, url: str = "", force: bool = False, rec: bool = True, args: str = ""
     ) -> bool:
@@ -359,9 +363,7 @@ class Dsync(object):
 
     def stclc_module_info(self, module: str) -> str:
         """show the status of the specific module"""
-        return self.shell.run_command(
-            f"showstatus -report script {module}"
-        )
+        return self.shell.run_command(f"showstatus -report script {module}")
 
     def stclc_module_status(self, module: str) -> str:
         """show the status of the specific module"""
@@ -432,9 +434,7 @@ class Dsync(object):
     def stclc_rm_mod(self, container: str, name: str) -> None:
         """remove the dsync module to the specified container"""
         # FIXME: BROKEN - copy/pasted from above
-        resp = self.shell.run_command(
-            f"rmhref {container} {name}", self.test_mode
-        )
+        resp = self.shell.run_command(f"rmhref {container} {name}", self.test_mode)
         print(resp)
 
     def stclc_make_sitr_mod(self, name: str, desc: str, no_cache: bool = False) -> None:
@@ -758,7 +758,7 @@ class Dsync(object):
                         container_hrefs,
                         href["url"],
                         href["relpath"],
-                        href["selector"]
+                        href["selector"],
                     )
                 if prompt_to_continue("Populate Updates"):
                     self.stclc_populate(container, force=True)
@@ -1307,13 +1307,16 @@ class Dsync(object):
                 self.stclc_tag_files(tag, str(cds_lib), "-modified")
             hrefs = self.get_hrefs(mod)
             self.snapshot_add_submodules(tag, mod, hrefs)
+
     def get_ws_devname(self) -> str:
         config = self.stclc_get_branch()
         if config == "Trunk":
             config = "v100"
         return f'{os.environ["SYNC_DEVAREA_TOP"]}_{config}'.lower()
+
     def get_tapeout_tag(self) -> str:
-        return f'tapeout_{self.get_ws_devname()}'.lower()
+        return f"tapeout_{self.get_ws_devname()}".lower()
+
     def setup_tapeout_ws(self, sitr_mods: List[Dict], tag: str) -> bool:
         """put all of the modules into update mode with the tapeout selector"""
         errors = []
@@ -1503,7 +1506,7 @@ class Dsync(object):
             module = "$env(SYNC_DEVAREA_TOP)"
         resp = self.stclc_module_info(module)
         resp = parse_kv_response(resp)
-        return resp['actual']
+        return resp["actual"]
 
     def showstatus(self, modules) -> int:
         """Runs showstatus command for each module (or top module if none given)"""
@@ -1573,20 +1576,36 @@ class Dsync(object):
         recipients: List[str],
         content: str,
         smtp_host: str = "localhost",
+        port: int = 123,
     ) -> int:
         """
         Sends an email with `subject`, from `sender` to `recipients` with the given
         `content`.
         """
+        # smtp_password is in environment variable ?
+        try:
+            smtp_password = os.environ["smtp_pass"]
+        except KeyError:
+            LOGGER.exception("Smtp password is not an environment variable.")
+            return 1
+
         msg = EmailMessage()
         msg.set_content(content)
+
         msg["Subject"] = subject
         msg["From"] = sender
         msg["To"] = ", ".join(recipients)
-        # TODO: Check for errors
-        s = smtplib.SMTP(smtp_host)
-        s.send_message(msg)
-        s.quit()
+
+        try:
+            with smtplib.SMTP(smtp_host, port) as server:
+                server.starttls()
+                server.login(sender, smtp_password)
+                server.send_message(msg)
+
+        except Exception:
+            LOGGER.exception("Could not send Email.")
+            return 1
+
         return 0
 
 
