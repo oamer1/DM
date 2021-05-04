@@ -527,7 +527,7 @@ class Dsync(object):
         self.send_email(
             subject=f"wtf {command} command",
             sender="wtf script <noreply@qti.qualcomm.com>",
-            recipients=[email, "dimiter@naydenov.net"],
+            recipients=[email],
             content=content,
         )
 
