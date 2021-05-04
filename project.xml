@@ -1,12 +1,12 @@
 <Defaults>
-    <wtf_email>
+    <wtf>
 	<values>
 	    <anon
-		email_notify="mgajjar@qti.qualcomm.com"
+		email_notify="macjag10@gmail.com"
 	    />
 	</values>
 
-    </wtf_email>
+    </wtf>
 
     <!--
         The Run_Regress section contains information used by the Run

@@ -113,7 +113,7 @@ class WS_Builder(object):
         user = getpass.getuser()
         if shared_name:
             self.work_dir = self.project_dir / shared_name
-            self.user_dir = self.work_dir / name / user
+            self.user_dir = self.work_dir / name /user
             self.ws_name = f"{self.development_name}_{shared_name}"
         else:
             self.work_dir = self.project_dir / name
@@ -193,11 +193,20 @@ class WS_Builder(object):
             proj_setup += f"setenv {var} {self.proj_env[var]}\n"
             sh_setup += f"export {var}={self.proj_env[var]}\n"
 
-        setup_file = self.user_dir / ".cshrc.project"
-        if self.test_mode:
-            log_info(f"Creating {setup_file} = {proj_setup}")
+        try:
+          setup_file = self.user_dir / ".cshrc.project"
+          if self.test_mode:
+              log_info(f"Creating {setup_file} = {proj_setup}")
+          else:
+              setup_file.write_text(proj_setup)
+        except:
+            print("Could not find it")
         else:
-            setup_file.write_text(proj_setup)
+            setup_file = self.user_dir / user /".cshrc.project"
+            if self.test_mode:
+                log_info(f"Creating {setup_file} = {proj_setup}")
+            else:
+                setup_file.write_text(proj_setup) 
 
         setup_file = self.user_dir / ".shrc.project"
         if self.test_mode:
@@ -965,10 +974,17 @@ def set_ws(args: argparse.Namespace, config: ConfigParser) -> int:
             ws_section = f"area:{ws_name.lower()}_v100_{user_name}"
             if not config.has_section(ws_section):
                 log_error("Cannot find area %s!" % ws_name)
-
+    
+    user=getpass.getuser()
     ws = config[ws_section]
     ws_name = ws["name"]
-    ws_path = ws["path"]
+    ws_shared_check = ws["shared"]
+    
+    if ws_shared_check == "true":
+          ws_path = ws["path"]+"/"+ user
+    else:
+        ws_path = ws["path"]   
+ 
     log_info("Workspace name is %s" % ws_name)
     log_info("Workspace path is %s" % ws_path)
     return setup_shell(ws_path, ws_name, args.xterm)
