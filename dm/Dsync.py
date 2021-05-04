@@ -1576,18 +1576,11 @@ class Dsync(object):
         recipients: List[str],
         content: str,
         smtp_host: str = "localhost",
-        port: int = 123,
     ) -> int:
         """
         Sends an email with `subject`, from `sender` to `recipients` with the given
         `content`.
         """
-        # smtp_password is in environment variable ?
-        try:
-            smtp_password = os.environ["smtp_pass"]
-        except KeyError:
-            LOGGER.exception("Smtp password is not an environment variable.")
-            return 1
 
         msg = EmailMessage()
         msg.set_content(content)
@@ -1597,11 +1590,9 @@ class Dsync(object):
         msg["To"] = ", ".join(recipients)
 
         try:
-            with smtplib.SMTP(smtp_host, port) as server:
+            with smtplib.SMTP(smtp_host) as server:
                 server.starttls()
-                server.login(sender, smtp_password)
                 server.send_message(msg)
-
         except Exception:
             LOGGER.exception("Could not send Email.")
             return 1
