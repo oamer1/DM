@@ -22,8 +22,7 @@ from email.mime.text import MIMEText
 from pathlib import Path
 from textwrap import dedent
 from typing import Dict, List, Tuple
-from jinja2 import FileSystemLoader, Environment
-
+from jinja2 import FileSystemLoader, Environment, Markup
 
 import tabulate
 
@@ -466,16 +465,19 @@ class Dsync(object):
     ) -> bool:
         """submit the specified modules"""
 
+        # Content is html <p> snippet so its more customizable
         submit_email_content = dedent(
             """
-        New submit to module {mod}.
-        User {user} submitted {mod} new {ver}
-        Used arguments:
-        modules={mods}
-        comment={comment}
-        skipcheck={skipcheck}
+        <p>New submit to module {mod}.<br/>
+        User {user} submitted {mod} new {ver}. <br/>
+        Used arguments:.<br/>
+        modules={mods}.<br/>
+        comment={comment}.<br/>
+        skipcheck={skipcheck}.<br/></p>
         """
         )
+        # Remove new lines
+        submit_email_content.replace("\n", "")
 
         errors = {}
         vers = {}
@@ -504,6 +506,7 @@ class Dsync(object):
                         comment=comment,
                         skipcheck=skipcheck,
                     )
+                    # Escape html tags
                     self.email_command_output(email, f"submit {mod}", content)
             return True
         return False
@@ -1548,9 +1551,7 @@ class Dsync(object):
 
         return 0
 
-    def parse_project_xml(
-        self, fname: Path, section="wtf", key="email_notify"
-    ) -> str:
+    def parse_project_xml(self, fname: Path, section="wtf", key="email_notify") -> str:
         """
         Parses given project.xml file and extracts the value of `key` attribute from
         top-level element `section` -> `<values>`.
@@ -1590,7 +1591,7 @@ class Dsync(object):
         template = env.get_template("Email.html")
 
         # Place contents in content template placeholder
-        html_body = template.render(content=content)
+        html_body = template.render(content=Markup(content))
 
         msg = MIMEMultipart("alternative")
 
