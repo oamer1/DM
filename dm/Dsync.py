@@ -17,10 +17,13 @@ import re
 import smtplib
 import sys
 from collections import defaultdict
-from email.message import EmailMessage
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from pathlib import Path
 from textwrap import dedent
 from typing import Dict, List, Tuple
+from jinja2 import FileSystemLoader, Environment
+
 
 import tabulate
 
@@ -1579,15 +1582,22 @@ class Dsync(object):
     ) -> int:
         """
         Sends an email with `subject`, from `sender` to `recipients` with the given
-        `content`.
+        `content` body using Email.html template.
         """
+        # Load Email.html template
+        p = Path(__file__).parent / "Email_template"
+        env = Environment(loader=FileSystemLoader(Path(p)))
+        template = env.get_template("Email.html")
 
-        msg = EmailMessage()
-        msg.set_content(content)
+        # Place contents in content template placeholder
+        html_body = template.render(content=content)
+
+        msg = MIMEMultipart("alternative")
 
         msg["Subject"] = subject
         msg["From"] = sender
         msg["To"] = ", ".join(recipients)
+        msg.attach(MIMEText(html_body, "html"))
 
         try:
             with smtplib.SMTP(smtp_host) as server:
