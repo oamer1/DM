@@ -1546,7 +1546,7 @@ class Dsync(object):
         return 0
 
     def parse_project_xml(
-        self, fname: Path, section="wtf_email", key="email_notify"
+        self, fname: Path, section="wtf", key="email_notify"
     ) -> str:
         """
         Parses given project.xml file and extracts the value of `key` attribute from
