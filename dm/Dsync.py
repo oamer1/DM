@@ -506,7 +506,6 @@ class Dsync(object):
                         comment=comment,
                         skipcheck=skipcheck,
                     )
-                    # Escape html tags
                     self.email_command_output(email, f"submit {mod}", content)
             return True
         return False
