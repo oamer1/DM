@@ -24,6 +24,7 @@ from textwrap import dedent
 from typing import Dict, List, Tuple
 from jinja2 import FileSystemLoader, Environment, Markup
 
+
 import tabulate
 
 import pandas as pd
@@ -465,6 +466,7 @@ class Dsync(object):
     ) -> bool:
         """submit the specified modules"""
 
+        
         # Content is html <p> snippet so its more customizable
         submit_email_content = dedent(
             """
@@ -478,6 +480,7 @@ class Dsync(object):
         )
         # Remove new lines
         submit_email_content.replace("\n", "")
+
 
         errors = {}
         vers = {}
@@ -1550,7 +1553,9 @@ class Dsync(object):
 
         return 0
 
-    def parse_project_xml(self, fname: Path, section="wtf", key="email_notify") -> str:
+    def parse_project_xml(
+        self, fname: Path, section="wtf", key="email_notify"
+    ) -> str:
         """
         Parses given project.xml file and extracts the value of `key` attribute from
         top-level element `section` -> `<values>`.
@@ -1584,13 +1589,19 @@ class Dsync(object):
         Sends an email with `subject`, from `sender` to `recipients` with the given
         `content` body using Email.html template.
         """
+     
         # Load Email.html template
-        p = Path(__file__).parent / "Email_template"
-        env = Environment(loader=FileSystemLoader(Path(p)))
-        template = env.get_template("Email.html")
+        
+        import jinja2
+        
+        File_path =  str(Path(os.environ["RFA_MODELERS_DIR"])/"dm")
+        env = jinja2.Environment(loader=jinja2.FileSystemLoader(searchpath = "/prj/analog/blaster_eval/sandiego/chips/reference/reference_v100/work/mgajjar/REFERENCE/verif_modules/rfa_modelers/python3/dm/"))
+        #env = jinja2.Environment(loader=jinja2.FileSystemLoader(searchpath = File_path))
+        Email_file = "Email.html"
+        mail_template = env.get_template(Email_file)
 
         # Place contents in content template placeholder
-        html_body = template.render(content=Markup(content))
+        html_body = mail_template.render(content=content)
 
         msg = MIMEMultipart("alternative")
 
@@ -1598,14 +1609,16 @@ class Dsync(object):
         msg["From"] = sender
         msg["To"] = ", ".join(recipients)
         msg.attach(MIMEText(html_body, "html"))
-
-        try:
-            with smtplib.SMTP(smtp_host) as server:
-                server.starttls()
-                server.send_message(msg)
-        except Exception:
-            LOGGER.exception("Could not send Email.")
-            return 1
+        s = smtplib.SMTP(smtp_host)
+        s.send_message(msg)
+        s.quit()
+        #try:
+        #    with smtplib.SMTP(smtp_host) as server:
+        #        server.starttls()
+        #        server.send_message(msg)
+        #except Exception:
+        #   LOGGER.exception("Could not send Email.")
+        #   return 1
 
         return 0
 
@@ -1694,3 +1707,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
