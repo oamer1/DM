@@ -447,7 +447,7 @@ class TableParser:
             )
 
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as err:
-            log_error("ERROR: %r", err)
+            log_error("ERROR: %r" % err)
 
         else:
             end_datetime = datetime.utcnow()
@@ -660,7 +660,7 @@ def get_config(skip_update=False) -> ConfigParser:
     return config
 
 
-def all_areas() -> Iterable[Row]:
+def all_areas(config: ConfigParser) -> Iterable[Row]:
     for name in config["main"]["areas"].split(","):
         section = f"area:{name}"
         area = config[section]
@@ -671,7 +671,7 @@ def all_areas() -> Iterable[Row]:
 def ls_ws(args: argparse.Namespace, config: ConfigParser) -> int:
     """list existing workspaces"""
 
-    AreaParser.tabulate(all_areas())
+    AreaParser.tabulate(all_areas(config))
     return 0
 
 
@@ -892,7 +892,7 @@ def rm_ws(args: argparse.Namespace, config: ConfigParser) -> int:
         log_info("Cannot find workspace %s!" % args.ws_name)
         print("Please choose one of these workspaces:")
         areas = []
-        for i, area in enumerate(all_areas(), 1):
+        for i, area in enumerate(all_areas(config), 1):
             print(i, area["name"])
             areas.append(area["name"])
 
