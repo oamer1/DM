@@ -113,7 +113,7 @@ class WS_Builder(object):
         user = getpass.getuser()
         if shared_name:
             self.work_dir = self.project_dir / shared_name
-            self.user_dir = self.work_dir / name /user
+            self.user_dir = self.work_dir / name / user
             self.ws_name = f"{self.development_name}_{shared_name}"
         else:
             self.work_dir = self.project_dir / name
@@ -193,20 +193,11 @@ class WS_Builder(object):
             proj_setup += f"setenv {var} {self.proj_env[var]}\n"
             sh_setup += f"export {var}={self.proj_env[var]}\n"
 
-        try:
-          setup_file = self.user_dir / ".cshrc.project"
-          if self.test_mode:
-              log_info(f"Creating {setup_file} = {proj_setup}")
-          else:
-              setup_file.write_text(proj_setup)
-        except:
-            print("Could not find it")
+        setup_file = self.user_dir / ".cshrc.project"
+        if self.test_mode:
+            log_info(f"Creating {setup_file} = {proj_setup}")
         else:
-            setup_file = self.user_dir / user /".cshrc.project"
-            if self.test_mode:
-                log_info(f"Creating {setup_file} = {proj_setup}")
-            else:
-                setup_file.write_text(proj_setup) 
+            setup_file.write_text(proj_setup)
 
         setup_file = self.user_dir / ".shrc.project"
         if self.test_mode:
@@ -456,7 +447,7 @@ class TableParser:
             )
 
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as err:
-            log_error("ERROR: %r", err)
+            log_error("ERROR: %r" % err)
 
         else:
             end_datetime = datetime.utcnow()
@@ -669,17 +660,18 @@ def get_config(skip_update=False) -> ConfigParser:
     return config
 
 
+def all_areas(config: ConfigParser) -> Iterable[Row]:
+    for name in config["main"]["areas"].split(","):
+        section = f"area:{name}"
+        area = config[section]
+        yield area
+
+
 @command(help="list workspaces")
 def ls_ws(args: argparse.Namespace, config: ConfigParser) -> int:
     """list existing workspaces"""
 
-    def all_areas() -> Iterable[Row]:
-        for name in config["main"]["areas"].split(","):
-            section = f"area:{name}"
-            area = config[section]
-            yield area
-
-    AreaParser.tabulate(all_areas())
+    AreaParser.tabulate(all_areas(config))
     return 0
 
 
@@ -885,7 +877,7 @@ def join_ws(args: argparse.Namespace, config: ConfigParser) -> int:
 
 def setup_rm_ws_args(parser: argparse.ArgumentParser):
     parser.add_argument(
-        "ws_name", help="Specify the name of the workspace", type=str, metavar="WS_NAME"
+        "ws_name", help="Specify the name of the workspace", type=str, metavar="WS_NAME", default="", nargs="?"
     )
 
 
@@ -896,8 +888,16 @@ def rm_ws(args: argparse.Namespace, config: ConfigParser) -> int:
     """
 
     ws_section = f"area:{args.ws_name.lower()}"
-    if not config.has_section(ws_section):
-        log_error("Cannot find workspace %s!" % args.ws_name)
+    if not args.ws_name or not config.has_section(ws_section):
+        log_info("Cannot find workspace %s!" % args.ws_name)
+        print("Please choose one of these workspaces:")
+        areas = []
+        for i, area in enumerate(all_areas(config), 1):
+            print(i, area["name"])
+            areas.append(area["name"])
+
+        choice = input("(1-{})".format(i))
+        ws_section = f"area:{areas[int(choice)-1].lower()}"
 
     ws = config[ws_section]
     ws_name = ws["name"]
@@ -934,6 +934,8 @@ def setup_set_ws_args(parser: argparse.ArgumentParser):
         help="Specify the name of the workspace / development",
         type=str,
         metavar="WS_NAME",
+        default="",
+        nargs="?",
     )
     parser.add_argument(
         "-x",
@@ -967,24 +969,26 @@ def set_ws(args: argparse.Namespace, config: ConfigParser) -> int:
     """prepare and start an interactive shell for a workspace."""
     ws_name = args.ws_name
     ws_section = f"area:{ws_name.lower()}"
-    if not config.has_section(ws_section):
+    if not ws_name or not config.has_section(ws_section):
         user_name = getpass.getuser()
         ws_section = f"area:{ws_name.lower()}_{user_name}"
         if not config.has_section(ws_section):
             ws_section = f"area:{ws_name.lower()}_v100_{user_name}"
             if not config.has_section(ws_section):
-                log_error("Cannot find area %s!" % ws_name)
-    
-    user=getpass.getuser()
+                log_info("Did not provided any workspace name: %s!" % ws_name)
+                print("Please choose one of these workspaces:")
+                areas = []
+                for i, area in enumerate(all_areas(config), 1):
+                    print(i, area["name"])
+                    areas.append(area["name"])
+
+                choice = input("(1-{})".format(i))
+                ws_section = f"area:{areas[int(choice)-1].lower()}"
+
+
     ws = config[ws_section]
     ws_name = ws["name"]
-    ws_shared_check = ws["shared"]
-    
-    if ws_shared_check == "true":
-          ws_path = ws["path"]+"/"+ user
-    else:
-        ws_path = ws["path"]   
- 
+    ws_path = ws["path"]
     log_info("Workspace name is %s" % ws_name)
     log_info("Workspace path is %s" % ws_path)
     return setup_shell(ws_path, ws_name, args.xterm)
@@ -1099,3 +1103,4 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
+
