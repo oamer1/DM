@@ -6,6 +6,7 @@ import argparse
 import os
 import subprocess
 import sys
+import getpass
 from datetime import datetime
 from functools import wraps
 from pathlib import Path
@@ -373,7 +374,7 @@ def pop_latest(dm, args: argparse.Namespace) -> int:
         mod_list = dm.get_sitr_update_list(args.mods)
         dm.populate_configs(args.mods, mod_list)
         # TODO - run voos
-        # TODO - send email(check submit command, if --noemail option given then, no email, by default send email)
+        # TODO - send email
     return 0
 
 
@@ -581,7 +582,7 @@ def setup_ws(dm, args: argparse.Namespace) -> int:
         dm.setup_shared_ws(args.mods)
     else:
         dm.stclc_populate_workspace()
-    # TODO - send email(check submit command, if --noemail option given then, no email, by default send email)
+    # TODO - send email
     return 0
 
 
@@ -611,6 +612,7 @@ def setup_submit_args(parser):
 @command(setup=setup_submit_args)
 def submit(dm, args: argparse.Namespace) -> int:
     """Perform a SITaR submit / snapshot submit"""
+    user = getpass.getuser()
     tag = args.snap
     email = None
     if not args.noemail:
@@ -618,9 +620,21 @@ def submit(dm, args: argparse.Namespace) -> int:
         fname = config_dir / "project.xml"
         LOGGER.info("Parsing %s to find email to notify...", str(fname))
         email = dm.parse_project_xml(fname)
+        # try:
+        #     email = dm.parse_project_xml(fname)
+        # except:
+        #     Logger.error("Project.xml is not updated")
+        # else:
+        #     email = (f"{user}@qti.qualcomm.com")
         LOGGER.info("Using email: %s", email)
 
     return dm.submit(args.pop, tag, args.mods, args.module, args.comment, email=email)
+
+    # config_dir = Path(os.environ["QC_CONFIG_DIR"])
+    #     fname = config_dir / "project.xml"
+    #     LOGGER.info("Parsing %s to find email to notify...", str(fname))
+    #     email = dm.parse_project_xml(fname)
+    #     LOGGER.info("Using email: %s", email)
 
 
 def setup_mk_tapeout_ws(parser):
@@ -663,6 +677,9 @@ def setup_request_branch_args(parser):
     parser.add_argument(
         "-c", "--comment", default=None, help="Provide a comment for the action"
     )
+    parser.add_argument(
+        "--noemail", action="store_true", help="Do not send email"
+    )
 
 
 @command(setup=setup_request_branch_args)
@@ -670,6 +687,7 @@ def request_branch(dm, args: argparse.Namespace) -> int:
     """Request a branch for the current project"""
     # TODO - should not start up the first shell for this command
     return 0
+    
 
 
 def setup_mk_branch_args(parser):
@@ -705,7 +723,7 @@ def mk_branch(dm, args: argparse.Namespace) -> int:
         if not tag.startswith("tapeout"):
             LOGGER.error("The tag must start with tapeout.")
             return 1
-    url = dm.get_root_url(version=version)
+    url = dm.get_root_url(version=args.version)
     if not dm.stclc_mod_exists(url):
         LOGGER.error("The top level url ({url}) does not exist.")
         return 2
@@ -720,7 +738,6 @@ def mk_branch(dm, args: argparse.Namespace) -> int:
     args.mod_list = dm.flat_release_submit(args.mods, tag, args.comment)
     if not args.mod_list:
         return 3
-    args.version = args.tag
     return 0
 
 
@@ -748,9 +765,14 @@ def mk_release(dm, args: argparse.Namespace) -> int:
         config_dir = Path(os.environ["QC_CONFIG_DIR"])
         fname = config_dir / "project.xml"
         LOGGER.info("Parsing %s to find email to notify...", str(fname))
-        email = dm.parse_project_xml(fname)
+        try:
+            email = dm.parse_project_xml(fname)
+        except:
+            Logger.error("Project.xml is not updated")
+        else:
+            email = (f"{user}@qti.qualcomm.com")
         LOGGER.info("Using email: %s", email)
-# TODO - send email(Already implemented, need to modify with MIME basedd email)
+
     args.mod_list = dm.flat_release_submit(
         args.mods, args.snap, args.comment, email=email
     )
@@ -859,9 +881,14 @@ def int_release(dm, args: argparse.Namespace) -> int:
         config_dir = Path(os.environ["QC_CONFIG_DIR"])
         fname = config_dir / "project.xml"
         LOGGER.info("Parsing %s to find email to notify...", str(fname))
-        email = dm.parse_project_xml(fname)
+        try:
+            email = dm.parse_project_xml(fname)
+        except:
+            Logger.error("Project.xml is not updated")
+        else:
+            email = (f"{user}@qti.qualcomm.com")
         LOGGER.info("Using email: %s", email)
-# TODO - send email(Already implemented, need to modify with MIME basedd email)
+
     return dm.sitr_release(args.comment, email=email)
 
 
@@ -883,8 +910,13 @@ def release(dm, args: argparse.Namespace) -> int:
         config_dir = Path(os.environ["QC_CONFIG_DIR"])
         fname = config_dir / "project.xml"
         LOGGER.info("Parsing %s to find email to notify...", str(fname))
-        email = dm.parse_project_xml(fname)
-        LOGGER.info("Using email: %s", email) # TODO - send email(Already implemented, need to modify with MIME basedd email)
+        try:
+            email = dm.parse_project_xml(fname)
+        except:
+            Logger.error("Project.xml is not updated")
+        else:
+            email = (f"{user}@qti.qualcomm.com")
+        LOGGER.info("Using email: %s", email)
     return dm.sitr_release(args.comment, email=email)
 
 
@@ -1084,18 +1116,22 @@ def run_intshell_with_args(args, dm) -> int:
             # TODO - send email
         if args.request_branch:
             sitr_alias = f"baseline_{args.version}"
-            # TODO - check for errors
-            dm.create_branch(args.version, sitr_alias, args.comment)
-            # TODO - add in a JIRA email
+            email = None
+            if not args.noemail:
+                email = ("dmrfa.help") #This will generate a JIRA ticket
+                LOGGER.info("Using email: %s", email)
+            dm.create_branch(args.version, sitr_alias, args.comment, email=email)
+            
         if args.mk_branch:
             sitr_alias = f"baseline_{args.version}"
-            dm.force_version(sitr_alias)
+            # TODO - need to add this back
+            #dm.force_version(sitr_alias)
             mod_list = dm.branch_modules(
                 args.mods, args.mod_list, args.version, args.comment
             )
-            if not mod_list:
-                dm.sitr_integrate(mod_list, nopop=True)
-                dm.sitr_release(args.comment, skip_check=True, on_server=True)
+            #if not mod_list:
+            #    dm.sitr_integrate(mod_list, nopop=True)
+            #    dm.sitr_release(args.comment, skip_check=True, on_server=True)
     return 0
 
 def run_cadshell_with_args(args, cad) -> int:
