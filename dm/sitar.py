@@ -5,6 +5,7 @@ import getpass
 import logging
 import logging.handlers
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -13,7 +14,7 @@ from configparser import ConfigParser
 from datetime import datetime
 from functools import wraps
 from pathlib import Path
-from typing import Dict, Iterable, Optional
+from typing import Dict, List, Iterable, Optional
 
 import tabulate
 
@@ -55,20 +56,20 @@ def log_error(msg: str):
 
 # TODO - should this be a class?
 class WS_Builder(object):
-    """ Class for creating a SITaR based workspace
-        Attributes:
-            sitr_env: environment variables used for sda
-            proj_env: environment variables for the shell
-            project_dir: path to the root location of the workspace
-            work_dir: path to the working directory for sda
-            user_dir: path to the user directory where cadence is launched
-            ws_name: name of the sitr workspace
-            dsgn_proj: path to the design project location
-            container_name: name of the top container
-            development_name: name of the specific chip project
-            config_root: path for the config location for sda
-            test_mode: when true, do not run any actual commands
-            role: set to Design or Integrate
+    """Class for creating a SITaR based workspace
+    Attributes:
+        sitr_env: environment variables used for sda
+        proj_env: environment variables for the shell
+        project_dir: path to the root location of the workspace
+        work_dir: path to the working directory for sda
+        user_dir: path to the user directory where cadence is launched
+        ws_name: name of the sitr workspace
+        dsgn_proj: path to the design project location
+        container_name: name of the top container
+        development_name: name of the specific chip project
+        config_root: path for the config location for sda
+        test_mode: when true, do not run any actual commands
+        role: set to Design or Integrate
     """
 
     def __init__(self) -> None:
@@ -132,10 +133,7 @@ class WS_Builder(object):
         return self.work_dir.exists()
 
     def setup_sitr_env(
-        self,
-        chip_name: str,
-        chip_version: str,
-        base_path: "Path"
+        self, chip_name: str, chip_version: str, base_path: "Path"
     ) -> None:
         """setup the environment variables for creating the workspace using sda"""
         project_name = chip_name + "_" + chip_version
@@ -360,7 +358,15 @@ class WS_Builder(object):
             log_error(f"Unknown command {args.command}")
 
         flags = sum(
-            1 for f in (args.shared, args.tapeout, args.regression, args.release, args.integrator) if f
+            1
+            for f in (
+                args.shared,
+                args.tapeout,
+                args.regression,
+                args.release,
+                args.integrator,
+            )
+            if f
         )
         if flags > 1:  # make_ws / join_ws takes one of none of these
             log_error(
@@ -378,7 +384,9 @@ class WS_Builder(object):
             if not args.ws_name:
                 setattr(args, "ws_name", "release_prep")
             elif not args.ws_name.startswith("release_prep"):
-                log_error("The release prep workspace name must start with release_prep")
+                log_error(
+                    "The release prep workspace name must start with release_prep"
+                )
 
         elif args.regression:
             if not args.ws_name:
@@ -645,6 +653,7 @@ def update_cache(config: ConfigParser, cfg: Path, force=False):
     else:
         config.read([cfg])
 
+
 def get_config(skip_update=False) -> ConfigParser:
     """
     If the local cache does not exist yet, create it (also when force is True),
@@ -840,9 +849,7 @@ def make_ws(args: argparse.Namespace, config: ConfigParser) -> int:
     Create a SITaR workspace for the current project.
     """
     shared_flag = args.shared or args.tapeout or args.regression or args.release
-    ws = init_ws_builder(
-        config, args.dev_name, args.integrator, shared=shared_flag
-    )
+    ws = init_ws_builder(config, args.dev_name, args.integrator, shared=shared_flag)
     ws.test_mode = args.test_mode
     ws.validate_make_join_args(args)
 
@@ -856,7 +863,9 @@ def make_ws(args: argparse.Namespace, config: ConfigParser) -> int:
     return 0
 
 
-@command(help="join an existing shared workspace", setup=WS_Builder.setup_make_join_args)
+@command(
+    help="join an existing shared workspace", setup=WS_Builder.setup_make_join_args
+)
 def join_ws(args: argparse.Namespace, config: ConfigParser) -> int:
     """
     Joins an existing shared SITaR workspace for a project.
@@ -864,9 +873,7 @@ def join_ws(args: argparse.Namespace, config: ConfigParser) -> int:
     if args.integrator:
         log_error("Cannot join the integrator workspace")
 
-    ws = init_ws_builder(
-        config, args.dev_name, args.integrator
-    )
+    ws = init_ws_builder(config, args.dev_name, args.integrator)
     ws.validate_make_join_args(args)
     ws.test_mode = args.test_mode
 
@@ -877,7 +884,12 @@ def join_ws(args: argparse.Namespace, config: ConfigParser) -> int:
 
 def setup_rm_ws_args(parser: argparse.ArgumentParser):
     parser.add_argument(
-        "ws_name", help="Specify the name of the workspace", type=str, metavar="WS_NAME", default="", nargs="?"
+        "ws_name",
+        help="Specify the name of the workspace",
+        type=str,
+        metavar="WS_NAME",
+        default="",
+        nargs="?",
     )
 
 
@@ -964,6 +976,25 @@ def setup_shell(ws_path: str, dev_name: str = None, xterm: bool = False, cmd="")
     return 0
 
 
+def filter_workspaces(ws_names_areas: Iterable[Row], ws_filter: str) -> Iterable[Row]:
+    """
+    Utility function used for set_ws function
+    Filter Iterable[Row] Workspaces names that starts with word ws_filter
+    case insensitive and ingore spaces at word ends .
+    """
+    if not ws_filter:
+        return ws_names_areas
+
+    # strip any spaces at ends
+    ws_filter = ws_filter.strip()
+
+    regex_pattern = re.compile(rf"^{ws_filter}", re.IGNORECASE)
+    filtered_ws_names = (
+        area for area in ws_names_areas if regex_pattern.search(area["name"])
+    )
+    return filtered_ws_names
+
+
 @command(help="run shell in a workspace", setup=setup_set_ws_args)
 def set_ws(args: argparse.Namespace, config: ConfigParser) -> int:
     """prepare and start an interactive shell for a workspace."""
@@ -975,16 +1006,18 @@ def set_ws(args: argparse.Namespace, config: ConfigParser) -> int:
         if not config.has_section(ws_section):
             ws_section = f"area:{ws_name.lower()}_v100_{user_name}"
             if not config.has_section(ws_section):
+
+                filtered_areas = filter_workspaces(all_areas(config), ws_name)
+
                 log_info("Did not provided any workspace name: %s!" % ws_name)
                 print("Please choose one of these workspaces:")
                 areas = []
-                for i, area in enumerate(all_areas(config), 1):
+                for i, area in enumerate(filtered_areas, 1):
                     print(i, area["name"])
                     areas.append(area["name"])
 
                 choice = input("(1-{})".format(i))
                 ws_section = f"area:{areas[int(choice)-1].lower()}"
-
 
     ws = config[ws_section]
     ws_name = ws["name"]
@@ -1039,13 +1072,10 @@ def setup_parse_args():
         "-I",
         "--interactive",
         help="Bring up the interactive debug shell",
-        action="store_true"
+        action="store_true",
     )
     parser.add_argument(
-        "-T",
-        "--test_mode",
-        help="Run in test mode",
-        action="store_true"
+        "-T", "--test_mode", help="Run in test mode", action="store_true"
     )
 
     commands = parser.add_subparsers(
@@ -1096,6 +1126,7 @@ def main():
 
     if args.interactive:
         import IPython
+
         IPython.embed()
     elif args.command is not None:
         return args.func(args, config)
@@ -1103,4 +1134,3 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
-
