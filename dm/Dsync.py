@@ -16,6 +16,7 @@ import os
 import re
 import smtplib
 import sys
+import getpass
 from collections import defaultdict
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -26,7 +27,7 @@ from jinja2 import FileSystemLoader, Environment, Markup
 
 
 import tabulate
-
+import Process
 import pandas as pd
 from lxml.etree import ElementTree as ET
 
@@ -42,7 +43,8 @@ try:
     import dm
 except ImportError:
     import Process
-LOGGER = log.getLogger(__name__)
+
+#LOGGER = log.getLogger(__name__)
 
 
 def _add_to_kv_list(kv_list, string: str) -> bool:
@@ -270,12 +272,7 @@ class Dsync(object):
         """call stclc to do a sitr lookup to find new submits and return the response"""
         return self.shell.run_command(f"sitr lookup -report script {mod}")
 
-    def stclc_puts_resp(self) -> str:
-        """check the resp variable for the output from the prev command"""
-        return self.shell.run_command(
-            f'if [info exists resp] {{ puts $resp }} else {{ puts "ERROR" }}',
-            self.test_mode,
-        )
+ 
 
     def stclc_check_resp_error(self, msg: str) -> bool:
         """check the response from a previous command and return True if there is an error"""
@@ -570,16 +567,28 @@ class Dsync(object):
             module = "$env(SYNC_DEVAREA_TOP)"
         return self.shell.run_command(f"url vault {module}")
 
-    def stclc_create_branch(self, url: str, version: str, comment: str) -> bool:
+    def stclc_create_branch(self, url: str, version: str, comment: str, email=None,) -> bool:
         self.stream_command(
             f'set resp [sitr mkbranch -comment "{comment}" {version} {url}]'
         )
         resp = self.stclc_puts_resp()
+        
+        if email is not None:
+            prj, pr = url.split("%")
+            user = getpass.getuser()    
+            resp += f"New Branch Requested by user {user} for {prj}_{version} \n Used arguments:\ncomment={comment}\nversion={version}\nurl={prj}\n"
+            self.email_command_output(email, "mkbranch", resp)
+        return True
         if resp:
             LOGGER.error(f"create branch {resp}")
-            return True
         return False
 
+    def stclc_puts_resp(self) -> str:
+        """check the resp variable for the output from the prev command"""
+        return self.shell.run_command(
+            f'if [info exists resp] {{ puts $resp }} else {{ puts "ERROR" }}',
+            self.test_mode,
+        )
     def stream_command(self, cmd: str) -> None:
         """stream the specified command"""
         for resp in self.shell.stream_command(cmd, self.test_mode):
@@ -880,22 +889,24 @@ class Dsync(object):
             return {}
         return mod_list
 
-    def get_root_url(self, module: str = "", version: str = "") -> str:
+    def get_root_url(self, module: str = "", branch: str = "", version: str = "") -> str:
         """Create a branch of the specified module (will be top if not specified)"""
         root = self.stclc_get_url_root(module)
-        if version:
-            return f"{root}@{version}:"
+        if branch:
+            return f"{root}@{branch}:{version}"
+        elif version:
+            return f"{root}\;{version}"
         else:
             return root
 
-    def create_branch(self, version: str, module_tag: str, comment: str) -> bool:
+    def create_branch(self, version: str, module_tag: str, comment: str, email=None,) -> bool:
         """Create a branch of the current top module"""
-        url = self.get_root_url(version=version)
+        url = self.get_root_url(branch=version)
         if self.stclc_mod_exists(url):
             LOGGER.warn(f"The DSync module ({url}) already esists")
             return False
         if self.stclc_create_branch(
-            f'{os.environ["SYNC_DEVAREA_TOP"]}%0', version, comment
+            f'{os.environ["SYNC_DEVAREA_TOP"]}%0', version, comment, email=email,
         ):
             return True
         if not self.stclc_mod_exists(url):
@@ -917,7 +928,7 @@ class Dsync(object):
             if mod not in mod_list:
                 LOGGER.error(f"The module {mod} is not in the module list")
                 errors = True
-            branches.append({"module": mod["module"], "version": mod["tagName"]})
+            branches.append({"module": mod, "version": mod_list[mod]["tagName"]})
         if errors:
             return {}
 
@@ -931,7 +942,7 @@ class Dsync(object):
                 errors = True
             if not self.stclc_mod_exists(branched_url):
                 LOGGER.error(f"could not create the sitr module ({branched_url})")
-            mod_list[mod] = {"module": mod, "tagName": f"{version}_v1.1"}
+            mod_list[branch] = {"module": mod, "tagName": f"{version}_v1.1"}
         if errors:
             return {}
         return mod_list
@@ -1655,7 +1666,7 @@ def main():
     # Hack to work around Dsync symlinks
     path_of_script = Path(__file__).absolute().parent
     sys.path.append(str(path_of_script))
-    from Spreadsheet_if import Spreadsheet_xls
+    from spreadsheet import Spreadsheet_xls
 
     ss = Spreadsheet_xls()
     if args.xls:
