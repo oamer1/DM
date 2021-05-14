@@ -976,22 +976,22 @@ def setup_shell(ws_path: str, dev_name: str = None, xterm: bool = False, cmd="")
     return 0
 
 
-def filter_workspaces(ws_names_areas: Iterable[Row], ws_filter: str) -> Iterable[Row]:
+def filter_workspaces(ws_names_areas: Iterable[Row], ws_filter: str) -> List[str]:
     """
     Utility function used for set_ws function
     Filter Iterable[Row] Workspaces names that starts with word ws_filter
     case insensitive and ingore spaces at word ends .
     """
     if not ws_filter:
-        return ws_names_areas
+        return []
 
     # strip any spaces at ends
     ws_filter = ws_filter.strip()
 
     regex_pattern = re.compile(rf"^{ws_filter}", re.IGNORECASE)
-    filtered_ws_names = (
-        area for area in ws_names_areas if regex_pattern.search(area["name"])
-    )
+    filtered_ws_names = [
+        area["name"] for area in ws_names_areas if regex_pattern.search(area["name"])
+    ]
     return filtered_ws_names
 
 
@@ -1007,14 +1007,26 @@ def set_ws(args: argparse.Namespace, config: ConfigParser) -> int:
             ws_section = f"area:{ws_name.lower()}_v100_{user_name}"
             if not config.has_section(ws_section):
 
-                filtered_areas = filter_workspaces(all_areas(config), ws_name)
+                all_areas_names = [area["name"] for area in all_areas(config)]
 
-                log_info("Did not provided any workspace name: %s!" % ws_name)
+                # filter is provided
+                if ws_name:
+                    filtered_areas = filter_workspaces(all_areas(config), ws_name)
+                else:
+                    log_info("Did not provided any workspace name: %s!" % ws_name)
+                    filtered_areas = all_areas_names
+
+                # No filtered entries
+                # Set filtered_areas to all area names so they are displayes as options
+                if not filtered_areas:
+                    log_info(f"Filter {ws_name} is invalid, displaying all areas.")
+                    filtered_areas = all_areas_names
+
                 print("Please choose one of these workspaces:")
                 areas = []
                 for i, area in enumerate(filtered_areas, 1):
-                    print(i, area["name"])
-                    areas.append(area["name"])
+                    print(i, area)
+                    areas.append(area)
 
                 choice = input("(1-{})".format(i))
                 ws_section = f"area:{areas[int(choice)-1].lower()}"
