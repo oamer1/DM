@@ -1094,7 +1094,7 @@ def run_dmshell_with_args(args, dm) -> int:
         args.mods = sitr_mods
         args.module = modules
         if args.interactive:
-            import IPython
+            import IPython  # type: ignore
 
             IPython.embed()
         elif args.command and callable(args.func):
@@ -1142,7 +1142,7 @@ def run_cadshell_with_args(args, cad) -> int:
         wait_for_shell_with_timeout(cad.shell, "Cadence")
         # TODO - need to get the logfile
         if args.interactive:
-            import IPython
+            import IPython  # type: ignore
 
             IPython.embed()
         elif args.command and callable(args.func):

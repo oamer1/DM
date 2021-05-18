@@ -28,8 +28,8 @@ from jinja2 import FileSystemLoader, Environment, Markup
 
 import tabulate
 import Process
-import pandas as pd
-from lxml.etree import ElementTree as ET
+import pandas as pd  # type: ignore
+from lxml.etree import ElementTree as ET  # type: ignore
 
 try:
     import log
@@ -272,7 +272,7 @@ class Dsync(object):
         """call stclc to do a sitr lookup to find new submits and return the response"""
         return self.shell.run_command(f"sitr lookup -report script {mod}")
 
- 
+
 
     def stclc_check_resp_error(self, msg: str) -> bool:
         """check the response from a previous command and return True if there is an error"""
@@ -463,7 +463,7 @@ class Dsync(object):
     ) -> bool:
         """submit the specified modules"""
 
-        
+
         # Content is html <p> snippet so its more customizable
         submit_email_content = dedent(
             """
@@ -572,10 +572,10 @@ class Dsync(object):
             f'set resp [sitr mkbranch -comment "{comment}" {version} {url}]'
         )
         resp = self.stclc_puts_resp()
-        
+
         if email is not None:
             prj, pr = url.split("%")
-            user = getpass.getuser()    
+            user = getpass.getuser()
             resp += f"New Branch Requested by user {user} for {prj}_{version} \n Used arguments:\ncomment={comment}\nversion={version}\nurl={prj}\n"
             self.email_command_output(email, "mkbranch", resp)
         return True
@@ -1600,11 +1600,11 @@ class Dsync(object):
         Sends an email with `subject`, from `sender` to `recipients` with the given
         `content` body using Email.html template.
         """
-     
+
         # Load Email.html template
-        
+
         import jinja2
-        
+
         File_path =  str(Path(os.environ["RFA_MODELERS_DIR"])/"dm")
         env = jinja2.Environment(loader=jinja2.FileSystemLoader(searchpath = "/prj/analog/blaster_eval/sandiego/chips/reference/reference_v100/work/mgajjar/REFERENCE/verif_modules/rfa_modelers/python3/dm/"))
         #env = jinja2.Environment(loader=jinja2.FileSystemLoader(searchpath = File_path))
@@ -1718,4 +1718,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
