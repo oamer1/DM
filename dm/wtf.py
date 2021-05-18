@@ -26,7 +26,7 @@ try:
 except ImportError:
     try:
         pwd = os.path.dirname(os.path.abspath(__file__))
-        sys.path.insert(0, pwd + '/../log')
+        sys.path.insert(0, pwd + "/../log")
         import log
     except ImportError:
         pass
@@ -37,11 +37,11 @@ try:
 except ImportError:
     try:
         pwd = os.path.dirname(os.path.abspath(__file__))
-        sys.path.insert(0, pwd + '/../dm')
+        sys.path.insert(0, pwd + "/../dm")
         from dm import *
     except ImportError:
         pass
-#from dm import *  # isort:skip
+# from dm import *  # isort:skip
 
 LOGGER = log.getLogger(__name__)
 
@@ -677,9 +677,7 @@ def setup_request_branch_args(parser):
     parser.add_argument(
         "-c", "--comment", default=None, help="Provide a comment for the action"
     )
-    parser.add_argument(
-        "--noemail", action="store_true", help="Do not send email"
-    )
+    parser.add_argument("--noemail", action="store_true", help="Do not send email")
 
 
 @command(setup=setup_request_branch_args)
@@ -687,7 +685,6 @@ def request_branch(dm, args: argparse.Namespace) -> int:
     """Request a branch for the current project"""
     # TODO - should not start up the first shell for this command
     return 0
-    
 
 
 def setup_mk_branch_args(parser):
@@ -770,7 +767,7 @@ def mk_release(dm, args: argparse.Namespace) -> int:
         except:
             Logger.error("Project.xml is not updated")
         else:
-            email = (f"{user}@qti.qualcomm.com")
+            email = f"{user}@qti.qualcomm.com"
         LOGGER.info("Using email: %s", email)
 
     args.mod_list = dm.flat_release_submit(
@@ -886,7 +883,7 @@ def int_release(dm, args: argparse.Namespace) -> int:
         except:
             Logger.error("Project.xml is not updated")
         else:
-            email = (f"{user}@qti.qualcomm.com")
+            email = f"{user}@qti.qualcomm.com"
         LOGGER.info("Using email: %s", email)
 
     return dm.sitr_release(args.comment, email=email)
@@ -915,7 +912,7 @@ def release(dm, args: argparse.Namespace) -> int:
         except:
             Logger.error("Project.xml is not updated")
         else:
-            email = (f"{user}@qti.qualcomm.com")
+            email = f"{user}@qti.qualcomm.com"
         LOGGER.info("Using email: %s", email)
     return dm.sitr_release(args.comment, email=email)
 
@@ -1051,10 +1048,11 @@ def setup_args_parser():
 def dump_dss_logfile_to_log(dm):
     """Log where Dsync will log commands."""
     resp = dm.shell.run_command("log")
-        
+
     for line in resp.splitlines():
         if "Logfile:" in line:
             LOGGER.debug(line.strip())
+
 
 def run_dmshell_with_args(args, dm) -> int:
     """Run the interactive shell to start stclc for dsync commands."""
@@ -1097,12 +1095,14 @@ def run_dmshell_with_args(args, dm) -> int:
         args.module = modules
         if args.interactive:
             import IPython
+
             IPython.embed()
         elif args.command and callable(args.func):
             LOGGER.debug("RUNNING: %s", args.command)
             exit_code = args.func(dm, args)
             # TODO - need to send the exit command
     return exit_code
+
 
 def run_intshell_with_args(args, dm) -> int:
     """Run the interactive shell to start stclc in the integrator mode."""
@@ -1118,21 +1118,22 @@ def run_intshell_with_args(args, dm) -> int:
             sitr_alias = f"baseline_{args.version}"
             email = None
             if not args.noemail:
-                email = ("dmrfa.help") #This will generate a JIRA ticket
+                email = "dmrfa.help"  # This will generate a JIRA ticket
                 LOGGER.info("Using email: %s", email)
             dm.create_branch(args.version, sitr_alias, args.comment, email=email)
-            
+
         if args.mk_branch:
             sitr_alias = f"baseline_{args.version}"
             # TODO - need to add this back
-            #dm.force_version(sitr_alias)
+            # dm.force_version(sitr_alias)
             mod_list = dm.branch_modules(
                 args.mods, args.mod_list, args.version, args.comment
             )
-            #if not mod_list:
+            # if not mod_list:
             #    dm.sitr_integrate(mod_list, nopop=True)
             #    dm.sitr_release(args.comment, skip_check=True, on_server=True)
     return 0
+
 
 def run_cadshell_with_args(args, cad) -> int:
     """Run the interactive shell to start cadence for CIW commands."""
@@ -1142,12 +1143,14 @@ def run_cadshell_with_args(args, cad) -> int:
         # TODO - need to get the logfile
         if args.interactive:
             import IPython
+
             IPython.embed()
         elif args.command and callable(args.func):
             LOGGER.debug("RUNNING: %s", args.command)
             exit_code = args.func(cad, args)
             # TODO - need to send the exit command
     return exit_code
+
 
 def run_with_args(args) -> int:
     """Run the main script entrypoint with the given args, return the exit code."""
@@ -1179,7 +1182,7 @@ def run_with_args(args) -> int:
 
     if args.command in ("mk_tapeout_ws"):
         config = sitar.get_config()
-        ws = sitar.init_ws_builder( config, args.dev_name, args.ws_name)
+        ws = sitar.init_ws_builder(config, args.dev_name, args.ws_name)
         ws.create_shared_ws(args.ws_name)
 
     # Relaunch the DM shell as the integrator
