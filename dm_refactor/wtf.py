@@ -11,7 +11,8 @@ from datetime import datetime
 from functools import wraps
 from pathlib import Path
 from typing import Dict, Iterable, Optional
-#from parse_xml import parse_project_xml
+
+# from parse_xml import parse_project_xml
 
 SCRIPT_NAME = Path(__file__).name
 LOG_DIR = Path(os.environ.get("SYNC_DEVAREA_DIR", Path.home())) / "logs"
@@ -618,7 +619,7 @@ def submit(dm, args: argparse.Namespace) -> int:
     email = None
     if not args.noemail:
         config_dir = Path(os.environ["QC_CONFIG_DIR"])
-        fname = config_dir/ "project.xml"
+        fname = config_dir / "project.xml"
         LOGGER.info("Parsing %s to find email to notify...", str(fname))
         email = dm.parse_project_xml(fname)
         # try:

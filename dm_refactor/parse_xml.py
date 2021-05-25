@@ -34,4 +34,3 @@ def parse_project_xml(fname: Path, section="wtf", key="email_notify") -> str:
     except Exception as err:
         LOGGER.exception("Cannot parse %s: %s", str(fname), str(err))
         return ""
-

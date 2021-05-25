@@ -178,7 +178,7 @@ class Sitar_dm(dm.Dsync_dm):
         self, modules: List[str], comment: str, skipcheck: bool = False, email=None
     ) -> bool:
         """submit the specified modules"""
-        
+
         errors = self.stclc_submit_module(modules, comment, skipcheck)
 
         if errors:
@@ -187,7 +187,12 @@ class Sitar_dm(dm.Dsync_dm):
 
             if email is not None:
                 for mod in vers:
-                    ver = errors[mod]['vers'].partition(" : Added")[-1].splitlines()[0].strip()
+                    ver = (
+                        errors[mod]["vers"]
+                        .partition(" : Added")[-1]
+                        .splitlines()[0]
+                        .strip()
+                    )
                     content = {
                         "mod": mod,
                         "mods": ",".join(modules),
@@ -249,9 +254,9 @@ class Sitar_dm(dm.Dsync_dm):
 
             DEVELOPMENT_DIR = Path(os.environ["SYNC_DEVELOPMENT_DIR"])
             sitar_env = self.shell.run_command("sitr env")
-            data = [k for k in sitar_env.split('\n') if len(k)>3 and  k != "=" ]
-            data1 = [k for k in data if any(s in k for s in "=") ] 
-            data2 = {k.split('=')[0].strip():k.split('=')[1].strip() for k in data1} 
+            data = [k for k in sitar_env.split("\n") if len(k) > 3 and k != "="]
+            data1 = [k for k in data if any(s in k for s in "=")]
+            data2 = {k.split("=")[0].strip(): k.split("=")[1].strip() for k in data1}
             content = {
                 "DEVELOPMENT_DIR": DEVELOPMENT_DIR,
                 "prj": prj,
@@ -294,7 +299,9 @@ class Sitar_dm(dm.Dsync_dm):
 
         mod_list = {}
         for branch in branches:
-            url = self.dssc_get_root_url(module=branch["module"], version=branch["version"])
+            url = self.dssc_get_root_url(
+                module=branch["module"], version=branch["version"]
+            )
             branched_url = self.dssc_get_root_url(
                 module=branch["module"], version=f"{version}_v1.1"
             )
@@ -303,7 +310,10 @@ class Sitar_dm(dm.Dsync_dm):
                 errors = True
             if not self.stclc_mod_exists(branched_url):
                 LOGGER.error(f"could not create the sitr module ({branched_url})")
-            mod_list[branch['module']] = {"module": branch['module'], "tagName": f"{version}_v1.1"}
+            mod_list[branch["module"]] = {
+                "module": branch["module"],
+                "tagName": f"{version}_v1.1",
+            }
         if errors:
             return {}
         return mod_list
@@ -339,7 +349,9 @@ class Sitar_dm(dm.Dsync_dm):
             print(f"Scanning {mod}")
             self.stclc_compare(args, args2)
 
-    def sitr_check_tag(self, sitr_mods: List[Dict], modules: List[str], tag: str) -> None:
+    def sitr_check_tag(
+        self, sitr_mods: List[Dict], modules: List[str], tag: str
+    ) -> None:
         """Check the specified tag and display the versions of the files that were tagged"""
         if not tag:
             tag = self.stclc_get_branch()
@@ -381,7 +393,9 @@ class Sitar_dm(dm.Dsync_dm):
             return True
         return False
 
-    def sitr_overlay_tag(self, sitr_mods: List[Dict], modules: List[str], tag: str) -> None:
+    def sitr_overlay_tag(
+        self, sitr_mods: List[Dict], modules: List[str], tag: str
+    ) -> None:
         """Display a list of the files checked out in the specified modules"""
         errors = []
         for mod in modules:
@@ -468,9 +482,9 @@ class Sitar_dm(dm.Dsync_dm):
                 self.io.display_mod_files(files)
                 errors.add(mod)
                 continue
-            #files = self.dssc_ls_modules(mod, modified=True)
-            #LOGGER.debug(f"results from show modified = {files}")
-            #if files:
+            # files = self.dssc_ls_modules(mod, modified=True)
+            # LOGGER.debug(f"results from show modified = {files}")
+            # if files:
             #    LOGGER.warn(
             #        f"The module {mod} has modified files and cannot be submitted"
             #    )
@@ -774,6 +788,7 @@ class Sitar_dm(dm.Dsync_dm):
             attachment=attachment,
         )
 
+
 def main():
     """Main routine that is invoked when you run the script"""
     parser = argparse.ArgumentParser(
@@ -804,12 +819,12 @@ def main():
     if args.debug:
         log.set_debug()
     # Hack to work around Dsync symlinks
-    #path_of_script = Path(__file__).absolute().parent
-    #sys.path.append(str(path_of_script))
-    #from Spreadsheet_if import Spreadsheet_xls
+    # path_of_script = Path(__file__).absolute().parent
+    # sys.path.append(str(path_of_script))
+    # from Spreadsheet_if import Spreadsheet_xls
 
-    #ss = Spreadsheet_xls()
-    #if args.xls:
+    # ss = Spreadsheet_xls()
+    # if args.xls:
     #    ss.open_ss(args.xls)
     #    ss.set_active_sheet_no(0)
     #    ss.set_header_key("CORE NAME")
@@ -837,5 +852,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-

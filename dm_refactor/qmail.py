@@ -11,7 +11,6 @@ from typing import List, Dict
 import jinja2
 
 
-
 def send_email(
     subject: str,
     sender: str,
@@ -38,7 +37,7 @@ def send_email(
     if command_template == "request_branch":
         subject = f"New Branch Requested by {user}"
     else:
-        subject= f"Wtf {command_template} command"
+        subject = f"Wtf {command_template} command"
 
     commands = list(Email_templates.keys())
 

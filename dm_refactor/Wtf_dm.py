@@ -42,8 +42,6 @@ class Wtf_dm(dm.Sitar_dm):
         self.dev_dir = None
         self.version = None
 
-
-
     def wtf_get_sitr_modules(self, given_mods: List, only_update: bool = False):
         """
         Returns all and the effective modules that are available (or explicitly
@@ -70,7 +68,7 @@ class Wtf_dm(dm.Sitar_dm):
                     LOGGER.warn(f"The module {mod} is not in update mode")
                     continue
             self.modules.append(mod)
-    
+
     def populate(self, force: bool = False) -> int:
         """Populate a SITaR workspace"""
         if self.workspace_type == "Tapeout":
@@ -82,7 +80,6 @@ class Wtf_dm(dm.Sitar_dm):
             self.stclc_populate_workspace(force)
         return 0
 
-
     def pop_modules(self, force: bool = False) -> int:
         """Populate all modules in update mode in the SITaR workspace"""
         if self.modules:
@@ -92,12 +89,10 @@ class Wtf_dm(dm.Sitar_dm):
         self.dssc_pop_modules(mod_list, force)
         return 0
 
-
     def populate_tag(self, tag: str, force: bool = False) -> int:
         """Populate a tag in a SITaR workspace when modules are in update mode"""
         self.sitr_populate_tag(self.sitr_mods, self.modules, tag, force)
         return 0
-
 
     def pop_latest(self, tag: str = "", force: bool = False) -> int:
         """Populate a SITaR workspace for the flat release flow"""
@@ -123,12 +118,10 @@ class Wtf_dm(dm.Sitar_dm):
             # TODO - send email
         return 0
 
-
     def status(self) -> int:
         """Perform a SITaR status"""
         self.sitr_status()
         return 0
-
 
     def update(self, config: str = "", delta: bool = False) -> int:
         """Set module(s) (or all modules) in update mode"""
@@ -139,31 +132,26 @@ class Wtf_dm(dm.Sitar_dm):
             self.update_module(self.modules, config)
         return 0
 
-
     def restore(self) -> int:
         """Restore the specified module to the latest baseline"""
         self.restore_module(self.sitr_mods, self.modules)
 
         return 0
 
-
     def show_checkouts(self) -> int:
         """Scan for checkouts in the module"""
         self.dssc_show_checkouts(self.modules)
         return 0
-
 
     def show_locks(self) -> int:
         """Show the files locked in the module module"""
         self.dssc_show_locks(self.modules)
         return 0
 
-
     def show_unmanaged(self) -> int:
         """Show unmanaged files in the specified modules"""
         self.sitr_show_unmanaged(self.sitr_mods, self.modules)
         return 0
-
 
     def showstatus(self) -> int:
         """Runs showstatus command for the modules"""
@@ -172,42 +160,36 @@ class Wtf_dm(dm.Sitar_dm):
         self.sitr_showstatus(modules)
         return 0
 
-
     def showhrefs(self, submod: str = "", fname: str = "") -> int:
         """Show the Hrefs for the specified modules"""
         href_args = (self.modules if self.module_given else [], submod)
         self.dssc_show_module_hrefs(*href_args, fname)
         return 0
 
-
     def updatehrefs(self, submod: str = "", fname: str = "") -> int:
         """Update Hrefs from a XLS file, optionally filtering by submodule"""
         self.dssc_update_hrefs(submod, fname)
         return 0
 
-
     def check_tag(self, tag: str) -> int:
         """Checks for the TAG for files in MODULE"""
         return self.sitr_check_tag(self.sitr_mods, self.modules, tag)
 
-
-    def compare(self, tag: str = "", trunk: bool = False, baseline: bool = False) -> int:
+    def compare(
+        self, tag: str = "", trunk: bool = False, baseline: bool = False
+    ) -> int:
         """Run a compare on the specified MODULES vs Trunk/Version/Tag"""
         return self.sitr_compare(self.sitr_mods, self.modules, tag, trunk, baseline)
-
 
     def vhistory(self) -> int:
         """This command will display the version history for the module"""
         self.dssc_vhistory(self.modules)
         return 0
 
-
     def overlay_tag(self, tag: str) -> int:
         """Overlay the specified tag in the specified modules and check-in"""
         self.sitr_overlay_tag(self.sitr_mods, self.modules, tag)
         return 0
-
-
 
     def setup_ws(self) -> int:
         """Setup a workspace after it has been created"""
@@ -221,8 +203,9 @@ class Wtf_dm(dm.Sitar_dm):
         # TODO - send email
         return 0
 
-
-    def submit(self, tag: str = "", pop: bool = False, comment: str = "", noemail: bool = False) -> int:
+    def submit(
+        self, tag: str = "", pop: bool = False, comment: str = "", noemail: bool = False
+    ) -> int:
         """Perform a SITaR submit / snapshot submit"""
         user = getpass.getuser()
         email = None
@@ -234,8 +217,9 @@ class Wtf_dm(dm.Sitar_dm):
             email = parse_project_xml(fname)
             LOGGER.info("Using email: %s", email)
 
-        return self.sitr_submit(pop, tag, self.sitr_mods, self.modules, comment, email=email)
-
+        return self.sitr_submit(
+            pop, tag, self.sitr_mods, self.modules, comment, email=email
+        )
 
     def mk_tapeout_ws(self, tag: str = "") -> int:
         """Make the tapeout workspace for the project"""
@@ -251,7 +235,6 @@ class Wtf_dm(dm.Sitar_dm):
         self.make_tapeout_ws(self.sitr_mods, tag)
         return 0
 
-
     def request_branch(self, version: str, comment: str) -> int:
         """Request a branch for the current project"""
         sitr_alias = f"baseline_{version}"
@@ -259,25 +242,27 @@ class Wtf_dm(dm.Sitar_dm):
         self.create_branch(version, sitr_alias, comment)
         # TODO - add in a JIRA email
 
-
     def get_development_dir(self, version: str) -> Path:
         # TODO - need to mock this out
         base_path = Path(os.environ["SYNC_DEVELOPMENT_DIR"]).parent
         chip_name = os.environ["SYNC_DEVAREA_TOP"]
         # TODO - call the methods from sitar
-        #(project_name, container_name) = Dsync.get_sitr_proj_info(chip_name, version)
+        # (project_name, container_name) = Dsync.get_sitr_proj_info(chip_name, version)
         project_name = chip_name + "_" + version
         container_name = chip_name.upper()
-        #(development_dir, development_name) = Dsync.get_sitr_dev_info(base_path, project_name)
+        # (development_dir, development_name) = Dsync.get_sitr_dev_info(base_path, project_name)
         development_dir = base_path / project_name.lower()
         development_name = project_name.upper()
         if not development_dir.is_dir():
-            LOGGER.error(f"The development setup for {project_name} has not been setup. Cannot find {development_dir}.")
+            LOGGER.error(
+                f"The development setup for {project_name} has not been setup. Cannot find {development_dir}."
+            )
             return None
         return development_dir
 
-
-    def mk_branch(self, version: str, comment: str, tag: str = "", tapeout: str = "") -> int:
+    def mk_branch(
+        self, version: str, comment: str, tag: str = "", tapeout: str = ""
+    ) -> int:
         """Make a branch in the current workspace where the tapeout tag is populated"""
         if tapeout:
             tapeout = tapeout.lower()
@@ -307,9 +292,7 @@ class Wtf_dm(dm.Sitar_dm):
 
     def mk_branch_int(self, version: str, comment) -> int:
         branch = self.stclc_get_branch()
-        mod_list = self.branch_modules(
-            self.sitr_mods, self.mod_list, version, comment
-        )
+        mod_list = self.branch_modules(self.sitr_mods, self.mod_list, version, comment)
         if mod_list:
             self.sitr_integrate(mod_list, nopop=True)
             self.sitr_release(comment, skip_check=True, on_server=True)
@@ -344,7 +327,6 @@ class Wtf_dm(dm.Sitar_dm):
         self.sitr_release(comment, skip_check=True, on_server=True)
         return 0
 
-
     def lookup(self, fname: str = "") -> int:
         """Generate a report of submits that are ready to integrate"""
         # TODO - add in support for the all switch
@@ -356,8 +338,6 @@ class Wtf_dm(dm.Sitar_dm):
         else:
             self.io.display_mod_list(mod_list)
         return 0
-
-
 
     def integrate(self, fname: str = "") -> int:
         """Run integrate command (must be run as Integrator)"""
@@ -372,7 +352,6 @@ class Wtf_dm(dm.Sitar_dm):
             if self.io.prompt_to_continue():
                 self.sitr_integrate(mod_list)
         return 0
-
 
     def int_release(self, comment: str, fname: str = "", noemail: bool = False) -> int:
         """Perform a SITaR integrate and release (must be run as Integrator)"""
@@ -417,16 +396,12 @@ class Wtf_dm(dm.Sitar_dm):
             LOGGER.info("Using email: %s", email)
         return self.sitr_release(comment, email=email)
 
-
-
     def initial_setup(self):
         self.dump_dss_logfile_to_log()
         self.run_cdws()
 
     # TODO - move to different module
-    def parse_project_xml(
-        self, fname: Path, section="wtf", key="email_notify"
-    ) -> str:
+    def parse_project_xml(self, fname: Path, section="wtf", key="email_notify") -> str:
         """
         Parses given project.xml file and extracts the value of `key` attribute from
         top-level element `section` -> `<values>`.
@@ -447,6 +422,7 @@ class Wtf_dm(dm.Sitar_dm):
         except Exception as err:
             LOGGER.exception("Cannot parse %s: %s", str(fname), str(err))
             return ""
+
 
 def main():
     """Main routine that is invoked when you run the script"""
@@ -493,6 +469,7 @@ def main():
             import IPython  # type: ignore
 
             IPython.embed()  # jump to ipython shell
+
 
 if __name__ == "__main__":
     main()

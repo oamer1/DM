@@ -72,8 +72,7 @@ class Process(object):
         >>> resp
         'command 2'
         >>> resp2.lstrip()
-        'command 1> '
-"""
+        'command 1> '"""
 
     def __init__(
         self,
@@ -118,7 +117,7 @@ class Process(object):
                 return
             output += data
             if self._debug_thread:
-                print(data,end='')
+                print(data, end="")
             if output.endswith(self.prompt) or (self.stream and output.endswith("\n")):
                 self.queue.put(output)
                 output = ""
@@ -281,16 +280,16 @@ def main():
 
         doctest.testmod()
 
-    #sh = Process(command="/bin/cat")
+    # sh = Process(command="/bin/cat")
     sh = Process(command="/usr/bin/tclsh")
     sh._debug_thread = True
     sh.prompt = "% "
     sh.start_cmd = f'puts "{sh.prompt}"'
     sh.timeout = 1
     sh.cwd = "/tmp"
-    sh.env = {'TEST': '123'}
+    sh.env = {"TEST": "123"}
     with sh.run_shell():
-        #resp = sh.run_command(f"Hello World\n{sh.prompt}")
+        # resp = sh.run_command(f"Hello World\n{sh.prompt}")
 
         if args.interactive:
             import IPython  # type: ignore
