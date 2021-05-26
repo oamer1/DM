@@ -1173,7 +1173,7 @@ def run_with_args(args) -> int:
         if exit_code:
             return exit_code
 
-    if args.command in ("mk_lib"):
+    if args.command in ("mk_lib",):
         start_dir = os.environ["PROJ_USER_WORK"]
         cad = Cadence.Cadence(cwd=start_dir, test_mode=args.test)
         ciw_shell = Process.Process()
@@ -1182,7 +1182,7 @@ def run_with_args(args) -> int:
         if exit_code:
             return exit_code
 
-    if args.command in ("mk_tapeout_ws"):
+    if args.command in ("mk_tapeout_ws",):
         config = sitar.get_config()
         ws = sitar.init_ws_builder(config, args.dev_name, args.ws_name)
         ws.create_shared_ws(args.ws_name)
