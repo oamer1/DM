@@ -261,9 +261,16 @@ class WS_Builder(object):
             "-path",
             self.work_dir,
         ]
-        self.run_sda(arg_list)
-        self.setup_shared_ws()
-        self.setup_ws()
+
+        try:
+
+            self.run_sda(arg_list)
+            self.setup_shared_ws()
+            self.setup_ws()
+
+        except Exception as err:
+            log_error(f"Error creating shared ws {err}", exc_info=True)
+
         return True
 
     def join_shared_ws(self, dir_name: str) -> bool:
@@ -294,8 +301,15 @@ class WS_Builder(object):
             "-path",
             self.work_dir,
         ]
-        self.run_sda(arg_list)
-        self.setup_ws()
+
+        try:
+
+            self.run_sda(arg_list)
+            self.setup_ws()
+
+        except Exception as err:
+            log_error(f"Error creating ws {err}", exc_info=True)
+
         return True
 
     @classmethod
