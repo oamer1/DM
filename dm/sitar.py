@@ -455,7 +455,7 @@ class TableParser:
             )
 
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as err:
-            log_error("ERROR: %r" % err)
+            log_error("ERROR: %r" % err, exc_info=True)
 
         else:
             end_datetime = datetime.utcnow()
@@ -921,7 +921,9 @@ def rm_ws(args: argparse.Namespace, config: ConfigParser) -> int:
         subprocess.run(cmd, check=True, shell=True)
 
     except subprocess.CalledProcessError as err:
-        log_error(f"ERROR: Command failed with exit code {err.returncode}!")
+        log_error(
+            f"ERROR: Command failed with exit code {err.returncode}!", exc_info=True
+        )
 
     log_info("Workspace %s was removed." % ws_name)
 
