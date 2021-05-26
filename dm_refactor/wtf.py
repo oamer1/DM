@@ -12,6 +12,8 @@ from functools import wraps
 from pathlib import Path
 from typing import Dict, Iterable, Optional
 
+from Wtf_dm import Wtf_dm
+
 # from parse_xml import parse_project_xml
 
 SCRIPT_NAME = Path(__file__).name
@@ -305,14 +307,13 @@ def setup_populate_args(parser):
 @command(setup=setup_populate_args)
 def populate(dm, args: argparse.Namespace) -> int:
     """Populate a SITaR workspace"""
-    if dm.workspace_type == "Tapeout":
-        dm.setup_tapeout_ws(args.mods, dm.tapeout_tag)
-        dm.pop_sitr_modules(args.mods)
-    else:
-        if dm.workspace_type == "Shared":
-            dm.setup_shared_ws(args.mods)
-        dm.stclc_populate_workspace(args.force)
-    return 0
+
+    wtf_dm_inst = Wtf_dm()
+    wtf_dm_inst.sitr_mods = args.mods
+    wtf_dm_inst.tapeout_tag = dm.tapeout_tag
+    wtf_dm_inst.workspace_type = dm.workspace_type
+
+    wtf_dm_inst.populate(args.force)
 
 
 @command(setup=setup_populate_args)

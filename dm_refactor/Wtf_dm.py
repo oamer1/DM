@@ -41,6 +41,8 @@ class Wtf_dm(dm.Sitar_dm):
         self.module_given = False
         self.dev_dir = None
         self.version = None
+        self.tapeout_tag = None
+        self.workspace_type = None
 
     def wtf_get_sitr_modules(self, given_mods: List, only_update: bool = False):
         """
