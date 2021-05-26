@@ -48,8 +48,8 @@ def log_warn(msg: str):
     print(f"WARN: {msg}")
 
 
-def log_error(msg: str):
-    logger.error(msg)
+def log_error(msg: str, exc_info: bool = False):
+    logger.error(msg, exc_info=exc_info)
     print(f"ERROR: {msg}")
     sys.exit(1)
 
@@ -162,9 +162,11 @@ class WS_Builder(object):
         else:
             child = subprocess.Popen(arg_list, env=sub_env)
             exit_code = child.wait()
-            # TODO - should throw exception
+            # Throw Exception
             if exit_code:
-                sys.exit(f"Error encountered when creating workspace {exit_code}")
+                raise Exception(
+                    f"Error encountered when creating workspace {exit_code}"
+                )
 
     def setup_shared_ws(self) -> None:
         """setup the workspace (which is in a different location than the work dir"""
@@ -259,9 +261,16 @@ class WS_Builder(object):
             "-path",
             self.work_dir,
         ]
-        self.run_sda(arg_list)
-        self.setup_shared_ws()
-        self.setup_ws()
+
+        try:
+
+            self.run_sda(arg_list)
+            self.setup_shared_ws()
+            self.setup_ws()
+
+        except Exception as err:
+            log_error(f"Error creating shared ws {err}", exc_info=True)
+
         return True
 
     def join_shared_ws(self, dir_name: str) -> bool:
@@ -292,8 +301,15 @@ class WS_Builder(object):
             "-path",
             self.work_dir,
         ]
-        self.run_sda(arg_list)
-        self.setup_ws()
+
+        try:
+
+            self.run_sda(arg_list)
+            self.setup_ws()
+
+        except Exception as err:
+            log_error(f"Error creating ws {err}", exc_info=True)
+
         return True
 
     @classmethod
@@ -455,7 +471,7 @@ class TableParser:
             )
 
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as err:
-            log_error("ERROR: %r" % err)
+            log_error("ERROR: %r" % err, exc_info=True)
 
         else:
             end_datetime = datetime.utcnow()
@@ -921,7 +937,9 @@ def rm_ws(args: argparse.Namespace, config: ConfigParser) -> int:
         subprocess.run(cmd, check=True, shell=True)
 
     except subprocess.CalledProcessError as err:
-        log_error(f"ERROR: Command failed with exit code {err.returncode}!")
+        log_error(
+            f"ERROR: Command failed with exit code {err.returncode}!", exc_info=True
+        )
 
     log_info("Workspace %s was removed." % ws_name)
 
@@ -972,7 +990,12 @@ def setup_shell(ws_path: str, dev_name: str = None, xterm: bool = False, cmd="")
     if xterm:
         command = f"xterm -e {command}"
 
-    subprocess.run(command, shell=True, cwd=ws_path, env=sub_env)
+    try:
+        subprocess.run(command, shell=True, cwd=ws_path, env=sub_env)
+
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as err:
+        log_error("ERROR: setting up shell %r" % err, exc_info=True)
+
     return 0
 
 
