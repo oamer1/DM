@@ -48,7 +48,7 @@ def log_warn(msg: str):
     print(f"WARN: {msg}")
 
 
-def log_error(msg: str, exc_info: bool = True):
+def log_error(msg: str, exc_info: bool = False):
     logger.error(msg, exc_info=exc_info)
     print(f"ERROR: {msg}")
     sys.exit(1)
