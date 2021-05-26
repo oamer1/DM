@@ -994,7 +994,7 @@ def setup_shell(ws_path: str, dev_name: str = None, xterm: bool = False, cmd="")
         subprocess.run(command, shell=True, cwd=ws_path, env=sub_env)
 
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as err:
-        log_error("ERROR: %r" % err, exc_info=True)
+        log_error("ERROR: setting up shell %r" % err, exc_info=True)
 
     return 0
 
