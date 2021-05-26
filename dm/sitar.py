@@ -990,7 +990,12 @@ def setup_shell(ws_path: str, dev_name: str = None, xterm: bool = False, cmd="")
     if xterm:
         command = f"xterm -e {command}"
 
-    subprocess.run(command, shell=True, cwd=ws_path, env=sub_env)
+    try:
+        subprocess.run(command, shell=True, cwd=ws_path, env=sub_env)
+
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as err:
+        log_error("ERROR: %r" % err, exc_info=True)
+
     return 0
 
 
