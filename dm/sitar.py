@@ -162,9 +162,11 @@ class WS_Builder(object):
         else:
             child = subprocess.Popen(arg_list, env=sub_env)
             exit_code = child.wait()
-            # TODO - should throw exception
+            # Throw Exception
             if exit_code:
-                sys.exit(f"Error encountered when creating workspace {exit_code}")
+                raise Exception(
+                    f"Error encountered when creating workspace {exit_code}"
+                )
 
     def setup_shared_ws(self) -> None:
         """setup the workspace (which is in a different location than the work dir"""
