@@ -5,6 +5,7 @@ import getpass
 import logging
 import logging.handlers
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -14,7 +15,7 @@ from datetime import datetime
 from functools import wraps
 from pathlib import Path
 from typing import Dict, List, Iterable, Optional
-import re
+
 import tabulate
 
 SCRIPT_NAME = Path(__file__).name
@@ -47,8 +48,8 @@ def log_warn(msg: str):
     print(f"WARN: {msg}")
 
 
-def log_error(msg: str):
-    logger.error(msg)
+def log_error(msg: str, exc_info: bool = False):
+    logger.error(msg, exc_info=exc_info)
     print(f"ERROR: {msg}")
     sys.exit(1)
 
@@ -161,9 +162,11 @@ class WS_Builder(object):
         else:
             child = subprocess.Popen(arg_list, env=sub_env)
             exit_code = child.wait()
-            # TODO - should throw exception
+            # Throw Exception
             if exit_code:
-                sys.exit(f"Error encountered when creating workspace {exit_code}")
+                raise Exception(
+                    f"Error encountered when creating workspace {exit_code}"
+                )
 
     def setup_shared_ws(self) -> None:
         """setup the workspace (which is in a different location than the work dir"""
@@ -258,9 +261,16 @@ class WS_Builder(object):
             "-path",
             self.work_dir,
         ]
-        self.run_sda(arg_list)
-        self.setup_shared_ws()
-        self.setup_ws()
+
+        try:
+
+            self.run_sda(arg_list)
+            self.setup_shared_ws()
+            self.setup_ws()
+
+        except Exception as err:
+            log_error(f"Error creating shared ws {err}", exc_info=True)
+
         return True
 
     def join_shared_ws(self, dir_name: str) -> bool:
@@ -291,8 +301,15 @@ class WS_Builder(object):
             "-path",
             self.work_dir,
         ]
-        self.run_sda(arg_list)
-        self.setup_ws()
+
+        try:
+
+            self.run_sda(arg_list)
+            self.setup_ws()
+
+        except Exception as err:
+            log_error(f"Error creating ws {err}", exc_info=True)
+
         return True
 
     @classmethod
@@ -454,7 +471,7 @@ class TableParser:
             )
 
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as err:
-            log_error("ERROR: %r" % err)
+            log_error("ERROR: %r" % err, exc_info=True)
 
         else:
             end_datetime = datetime.utcnow()
@@ -920,7 +937,9 @@ def rm_ws(args: argparse.Namespace, config: ConfigParser) -> int:
         subprocess.run(cmd, check=True, shell=True)
 
     except subprocess.CalledProcessError as err:
-        log_error(f"ERROR: Command failed with exit code {err.returncode}!")
+        log_error(
+            f"ERROR: Command failed with exit code {err.returncode}!", exc_info=True
+        )
 
     log_info("Workspace %s was removed." % ws_name)
 
@@ -971,22 +990,31 @@ def setup_shell(ws_path: str, dev_name: str = None, xterm: bool = False, cmd="")
     if xterm:
         command = f"xterm -e {command}"
 
-    subprocess.run(command, shell=True, cwd=ws_path, env=sub_env)
+    try:
+        subprocess.run(command, shell=True, cwd=ws_path, env=sub_env)
+
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as err:
+        log_error("ERROR: setting up shell %r" % err, exc_info=True)
+
     return 0
 
 
-def filter_workspaces(ws_names_areas: Iterable[Row], filter: str) -> Iterable[Row]:
+def filter_workspaces(ws_names_areas: Iterable[Row], ws_filter: str) -> List[str]:
     """
     Utility function used for set_ws function
-    Filter Iterable[Row] Workspaces names that starts with word filter
+    Filter Iterable[Row] Workspaces names that starts with word ws_filter
+    case insensitive and ingore spaces at word ends .
     """
-    if not filter:
-        return ws_names_areas
+    if not ws_filter:
+        return []
 
-    regex_pattern = re.compile(rf"^{filter}")
-    filtered_ws_names = (
-        area for area in ws_names_areas if regex_pattern.search(area["name"].lower())
-    )
+    # strip any spaces at ends
+    ws_filter = ws_filter.strip()
+
+    regex_pattern = re.compile(rf"^{ws_filter}", re.IGNORECASE)
+    filtered_ws_names = [
+        area["name"] for area in ws_names_areas if regex_pattern.search(area["name"])
+    ]
     return filtered_ws_names
 
 
@@ -997,20 +1025,34 @@ def set_ws(args: argparse.Namespace, config: ConfigParser) -> int:
     ws_section = f"area:{ws_name.lower()}"
     if not ws_name or not config.has_section(ws_section):
         user_name = getpass.getuser()
-        # ws_section = f"area:{ws_name.lower()}_v100_{user_name}"
+        ws_section = f"area:{ws_name.lower()}_{user_name}"
         if not config.has_section(ws_section):
+            ws_section = f"area:{ws_name.lower()}_v100_{user_name}"
+            if not config.has_section(ws_section):
 
-            filtered_areas = filter_workspaces(all_areas(config), ws_name.lower())
+                all_areas_names = [area["name"] for area in all_areas(config)]
 
-            log_info("Did not provided any workspace name: %s!" % ws_name)
-            print("Please choose one of these workspaces:")
-            areas = []
-            for i, area in enumerate(filtered_areas, 1):
-                print(i, area["name"])
-                areas.append(area["name"])
+                # filter is provided
+                if ws_name:
+                    filtered_areas = filter_workspaces(all_areas(config), ws_name)
+                else:
+                    log_info("Did not provided any workspace name: %s!" % ws_name)
+                    filtered_areas = all_areas_names
 
-            choice = input("(1-{})".format(i))
-            ws_section = f"area:{areas[int(choice)-1].lower()}"
+                # No filtered entries
+                # Set filtered_areas to all area names so they are displayes as options
+                if not filtered_areas:
+                    log_info(f"Filter {ws_name} is invalid, displaying all areas.")
+                    filtered_areas = all_areas_names
+
+                print("Please choose one of these workspaces:")
+                areas = []
+                for i, area in enumerate(filtered_areas, 1):
+                    print(i, area)
+                    areas.append(area)
+
+                choice = input("(1-{})".format(i))
+                ws_section = f"area:{areas[int(choice)-1].lower()}"
 
     ws = config[ws_section]
     ws_name = ws["name"]
