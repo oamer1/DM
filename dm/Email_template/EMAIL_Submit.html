@@ -1,0 +1,15 @@
+{% extends "layout.html" %}
+
+{% block body %}
+
+New submit to module {{ content.mod}} <br/>
+User {{ content.user}} submitted {{ content.mod}} new {{ content.ver}}. <br/>
+Used arguments:. <br/>
+modules = {{ content.mods }}.<br/>
+comment = {{ content.comment }}.<br/>
+skipcheck = {{ content.skipcheck }}.<br/>
+
+{% endblock %}
+
+
+

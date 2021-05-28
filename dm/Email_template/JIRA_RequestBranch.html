@@ -1,0 +1,13 @@
+{% extends "layout.html" %}
+
+{% block body %}
+
+New Branch from {{ content.DEVELOPMENT_DIR }} to {{content.prj}}_{{content.version}} <br/>
+Container Workspace = {{ content.Container_Workspace }} <br/>
+Requested by = {{ content.user }} <br/>
+Workspace URL = {{ content.Workspace_URL}} <br/>
+Branch Name = {{ content.version }} : <br/>
+Alias = {{ content.alias }} <br/>
+comment = {{ content.comment }} <br/>
+
+{% endblock %}
