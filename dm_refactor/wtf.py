@@ -11,10 +11,7 @@ from datetime import datetime
 from functools import wraps
 from pathlib import Path
 from typing import Dict, Iterable, Optional
-
-from Wtf_dm import Wtf_dm
-
-# from parse_xml import parse_project_xml
+#from parse_xml import parse_project_xml
 
 SCRIPT_NAME = Path(__file__).name
 LOG_DIR = Path(os.environ.get("SYNC_DEVAREA_DIR", Path.home())) / "logs"
@@ -36,15 +33,7 @@ except ImportError:
         pass
 
 
-try:
-    from dm import *
-except ImportError:
-    try:
-        pwd = os.path.dirname(os.path.abspath(__file__))
-        sys.path.insert(0, pwd + "/../dm")
-        from dm import *
-    except ImportError:
-        pass
+import dm
 # from dm import *  # isort:skip
 
 LOGGER = log.getLogger(__name__)
@@ -57,8 +46,8 @@ def command(*, setup: callable = None):
 
     def inner(func):
         @wraps(func)
-        def wrapped(dm, args: argparse.Namespace):
-            return func(dm, args)
+        def wrapped(dssc, args: argparse.Namespace):
+            return func(dssc, args)
 
         wrapped.__cmd__ = True
         wrapped.__setup__ = setup
@@ -101,35 +90,16 @@ def running_inside_dmsh():
     return False
 
 
-def write_mod_versions(mod_list, fname):
-    """Write out the module versions for integration"""
-    contents = [f"{mod}@{mod_list[mod]['tagName']}\n" for mod in mod_list]
-    path = Path(fname)
-    path.write_text("".join(contents))
-
-
-def read_mod_versions(fname):
-    """Read in the module versions for integration"""
-    f = Path(fname).resolve()
-    if not f.exists():
-        LOGGER.error(f"Given --integrate file {f!s} NOT found!")
-        return []
-    select_list = [
-        item.split("@") for item in f.read_text().splitlines() if "@" in item
-    ]
-    return {item[0]: {"module": item[0], "tagName": item[1]} for item in select_list}
-
-
 def setup_dmsh(start_dir, test_mode, bsub_mode=False):
     """
-    Sets up DMSH and prepares to run it, returning the configured dm and
+    Sets up DMSH and prepares to run it, returning the configured dssc and
     dm_shell."""
     LOGGER.debug(f"start dir = {start_dir}")
-    dm = Dsync.Dsync(cwd=start_dir, test_mode=test_mode, bsub_mode=bsub_mode)
-    # TODO - this will not work in shared
-    root_dir = Dsync.find_sitr_root_dir(start_dir)
-    # TODO - what about a shared ws?
+    dssc = dm.Wtf_dm(cwd=start_dir, test_mode=test_mode, bsub_mode=bsub_mode)
     env_dir = Path(os.environ["SYNC_DEVAREA_DIR"])
+    # TODO - this will not work in shared
+    root_dir = dm.find_sitr_root_dir(start_dir)
+    # TODO - what about a shared ws?
     # TODO - this does not work from the config directory
     if root_dir != env_dir:
         LOGGER.warn(
@@ -140,18 +110,18 @@ def setup_dmsh(start_dir, test_mode, bsub_mode=False):
         LOGGER.warn("Removing the data.reg file " "which interferes with DesignSync")
         data_reg.unlink()
     role = os.environ["SYNC_DEV_ASSIGNMENT"]
-    dm.workspace_type = "Design"
+    dssc.workspace_type = "Design"
     if role == "Shared":
         if env_dir.stem.startswith("tapeout"):
-            dm.workspace_type = "Tapeout"
-            dm.tapeout_tag = env_dir.stem
+            dssc.workspace_type = "Tapeout"
+            dssc.tapeout_tag = env_dir.stem
         elif env_dir.stem.startswith("shared"):
-            dm.workspace_type = "Shared"
+            dssc.workspace_type = "Shared"
     elif role == "Integrate":
-        dm.workspace_type = role
-    dm_shell = Process.Process()
-    dm.configure_shell(dm_shell)
-    return dm, dm_shell
+        dssc.workspace_type = role
+    dm_shell = dm.Process()
+    dssc.configure_shell(dm_shell)
+    return dssc, dm_shell
 
 
 def get_comment(
@@ -192,14 +162,8 @@ def wait_for_shell_with_timeout(shell, shell_type: str = "DM"):
         LOGGER.error(f"Timeout waiting for {shell_type} shell")
 
 
-def run_cdws(dm):
-    """Runs cdws commands returns the response."""
-    # container = dm.current_module()
-    return dm.shell.run_command("cdws")
-
-
 def get_sitr_modules(
-    dm,
+    dssc,
     given_mods,
     is_update,
     is_update_snap,
@@ -215,88 +179,19 @@ def get_sitr_modules(
     Returns all and the effective modules that are available (or explicitly
     given) depending on the command.
     """
-    sitr_mods = dm.get_sitr_modules()
-    if not given_mods:
-        given_mods = list(sitr_mods.keys())
-    modules = []
-    for mod in given_mods:
-        if mod not in sitr_mods:
-            LOGGER.warn(f"The module {mod} does not exist in this workspace")
-            continue
-        if "status" not in sitr_mods[mod]:
-            continue
-        LOGGER.debug(
-            f"mod = {mod}, "
-            f"path = {sitr_mods[mod]['relpath']}, "
-            f"status = {sitr_mods[mod]['status']}"
-        )
-        if not (is_update or is_update_snap) and (
-            is_pop_modules
-            or is_pop_tag
-            or is_checkin
-            or is_tag_sch
-            or is_show_checkouts
-            or is_submit
-            or is_snapshot
-        ):
-            if sitr_mods[mod]["status"] != "Update":
-                LOGGER.warn(f"The module {mod} is not in update mode")
-                continue
-        modules.append(mod)
-    return sitr_mods, modules
+    only_update = False
+    if not (is_update or is_update_snap) and (
+        is_pop_modules
+        or is_pop_tag
+        or is_checkin
+        or is_tag_sch
+        or is_show_checkouts
+        or is_submit
+        or is_snapshot
+    ):
+        only_update = True
 
-
-def run_update_snap(dm, sitr_mods, modules, run=False, is_force=False):
-    """Runs update_snap command if `run` is True."""
-    # TODO: Remove once refactored into a command
-    if run:
-        dm.update_module_snapshot(sitr_mods, modules, is_force)
-
-
-def run_restore(dm, sitr_mods, modules, run=False):
-    """Runs restore command if `run` is True."""
-    # TODO: Remove once restore command is tested and working
-    if run:
-        dm.restore_module(sitr_mods, modules)
-
-
-def run_pop_modules(dm, modules, run=False, is_force=False):
-    """Runs pop_modules command if `run` is True."""
-    # TODO: Remove once refactored into a command
-    if run:
-        dm.pop_sitr_modules(is_force, modules)
-
-
-def run_pop_tag(dm, sitr_mods, modules, tag, is_force=False):
-    """Runs pop_tag command if `tag` is non-empty."""
-    # TODO: Remove once refactored into a command
-    if tag:
-        dm.populate_tag(sitr_mods, modules, tag, is_force)
-
-
-def run_checkin(dm, modules, comment, run=False):
-    """Runs checkin command if `run` is True."""
-    # TODO: Remove once refactored into a command
-    if run:
-        dm.checkin_module(modules, comment)
-
-
-def run_tag_sch(dm, sitr_mods, modules, tag):
-    """Runs tag_sch command if `tag` is non-empty."""
-    # TODO: Remove once refactored into a command
-    if tag:
-        dm.tag_sch_sym(sitr_mods, modules, tag)
-
-
-def run_lookup(dm, modules, run=False):
-    """Run lookup command if `run` is True."""
-    # TODO: Remove once refactored into a command
-    if run:
-        mod_list = dm.get_sitr_update_list(modules)
-        if not mod_list:
-            LOGGER.warn("No new submits to integrate")
-        else:
-            dm.display_mod_list(mod_list)
+    dssc.wtf_get_sitr_modules(given_mods, only_update)
 
 
 def setup_populate_args(parser):
@@ -305,26 +200,15 @@ def setup_populate_args(parser):
 
 
 @command(setup=setup_populate_args)
-def populate(dm, args: argparse.Namespace) -> int:
+def populate(dssc, args: argparse.Namespace) -> int:
     """Populate a SITaR workspace"""
-
-    wtf_dm_inst = Wtf_dm()
-    wtf_dm_inst.sitr_mods = args.mods
-    wtf_dm_inst.tapeout_tag = dm.tapeout_tag
-    wtf_dm_inst.workspace_type = dm.workspace_type
-
-    wtf_dm_inst.populate(args.force)
+    return dssc.populate(args.force)
 
 
 @command(setup=setup_populate_args)
-def pop_modules(dm, args: argparse.Namespace) -> int:
+def pop_modules(dssc, args: argparse.Namespace) -> int:
     """Populate all modules in update mode in the SITaR workspace"""
-    if args.module:
-        mod_list = args.module
-    else:
-        mod_list = args.mods
-    dm.pop_sitr_modules(args.force, mod_list)
-    return 0
+    return dssc.pop_modules(args.force)
 
 
 def setup_populate_tag_args(parser):
@@ -342,10 +226,9 @@ def setup_populate_tag_args(parser):
 
 
 @command(setup=setup_populate_tag_args)
-def populate_tag(dm, args: argparse.Namespace) -> int:
+def populate_tag(dssc, args: argparse.Namespace) -> int:
     """Populate a tag in a SITaR workspace when modules are in update mode"""
-    dm.populate_tag(args.mods, args.module, args.tag, args.force)
-    return 0
+    return dssc.populate_tag(args.tag, args.force)
 
 
 def setup_pop_latest_args(parser):
@@ -362,30 +245,15 @@ def setup_pop_latest_args(parser):
 
 
 @command(setup=setup_pop_latest_args)
-def pop_latest(dm, args: argparse.Namespace) -> int:
+def pop_latest(dssc, args: argparse.Namespace) -> int:
     """Populate a SITaR workspace for the flat release flow"""
-    if dm.workspace_type == "Tapeout":
-        dm.setup_tapeout_ws(args.mods, dm.tapeout_tag, args.force)
-        dm.pop_sitr_modules(args.mods)
-    elif dm.workspace_type == "Shared":
-        dm.setup_shared_ws(args.mods)
-        dm.stclc_populate_workspace(args.force)
-    else:
-        dm.stclc_populate_workspace(args.force)
-        if args.tag:
-            dm.populate_tag(args.mods, args.mods, args.tag)
-        mod_list = dm.get_sitr_update_list(args.mods)
-        dm.populate_configs(args.mods, mod_list)
-        # TODO - run voos
-        # TODO - send email
-    return 0
+    return dssc.pop_latest(args.tag, args.force)
 
 
 @command()
-def status(dm, args: argparse.Namespace) -> int:
+def status(dssc, args: argparse.Namespace) -> int:
     """Perform a SITaR status"""
-    dm.sitr_status()
-    return 0
+    return dssc.status()
 
 
 def setup_update_args(parser):
@@ -408,52 +276,41 @@ def setup_update_args(parser):
 
 
 @command(setup=setup_update_args)
-def update(dm, args: argparse.Namespace) -> int:
+def update(dssc, args: argparse.Namespace) -> int:
     """Set module(s) (or all modules) in update mode"""
     # TODO - do we need the force switch? Or no overwrite?
-    if args.delta:
-        dm.update_module_snapshot(args.mods, args.module)
-    else:
-        dm.update_module(args.module, args.config)
-    return 0
+    return dssc.update(args.config,args.delta)
 
 
 @command()
-def restore(dm, args: argparse.Namespace) -> int:
+def restore(dssc, args: argparse.Namespace) -> int:
     """Restore the specified module to the latest baseline"""
-    # FIXME: Test if it works
-    run_restore(dm, args.mods, args.module, True)
-    return 0
+    return dssc.restore()
 
 
 @command()
-def show_checkouts(dm, args: argparse.Namespace) -> int:
+def show_checkouts(dssc, args: argparse.Namespace) -> int:
     """Scan for checkouts in the module"""
-    dm.show_checkouts(args.module)
-    return 0
+    return dssc.show_checkouts()
 
 
 @command()
-def show_locks(dm, args: argparse.Namespace) -> int:
+def show_locks(dssc, args: argparse.Namespace) -> int:
     """Show the files locked in the module module"""
-    dm.show_locks(args.module)
-    return 0
+    return dssc.show_locks()
 
 
 @command()
-def show_unmanaged(dm, args: argparse.Namespace) -> int:
+def show_unmanaged(dssc, args: argparse.Namespace) -> int:
     """Show unmanaged files in the specified modules"""
-    dm.show_unmanaged(args.mods, args.module)
-    return 0
+    return dssc.show_unmanaged()
 
 
 @command()
-def showstatus(dm, args: argparse.Namespace) -> int:
+def showstatus(dssc, args: argparse.Namespace) -> int:
     """Runs showstatus command for the modules"""
     # When no explicit modules are given, pass none.
-    modules = args.module if args.module_given else []
-    dm.showstatus(modules)
-    return 0
+    return dssc.showstatus()
 
 
 def setup_showhrefs(parser):
@@ -476,11 +333,9 @@ def setup_showhrefs(parser):
 
 
 @command(setup=setup_showhrefs)
-def showhrefs(dm, args: argparse.Namespace) -> int:
+def showhrefs(dssc, args: argparse.Namespace) -> int:
     """Show the Hrefs for the specified modules"""
-    href_args = (args.module if args.module_given else [], args.submod)
-    dm.show_module_hrefs(*href_args, args.output)
-    return 0
+    return dssc.showhrefs(args.submod, args.output)
 
 
 def setup_updatehrefs_args(parser):
@@ -503,10 +358,9 @@ def setup_updatehrefs_args(parser):
 
 
 @command(setup=setup_updatehrefs_args)
-def updatehrefs(dm, args: argparse.Namespace) -> int:
+def updatehrefs(dssc, args: argparse.Namespace) -> int:
     """Update Hrefs from a XLS file, optionally filtering by submodule"""
-    dm.update_hrefs(args.submod, args.input)
-    return 0
+    return dssc.updatehrefs(args.submod, args.input)
 
 
 def setup_check_tag_args(parser):
@@ -517,10 +371,9 @@ def setup_check_tag_args(parser):
 
 
 @command(setup=setup_check_tag_args)
-def check_tag(dm, args: argparse.Namespace) -> int:
+def check_tag(dssc, args: argparse.Namespace) -> int:
     """Checks for the TAG for files in MODULE"""
-    tag = args.tag
-    return dm.check_tag(args.mods, args.module, tag)
+    return dssc.check_tag(args.tag)
 
 
 def setup_compare_args(parser):
@@ -535,24 +388,22 @@ def setup_compare_args(parser):
 
 
 @command(setup=setup_compare_args)
-def compare(dm, args: argparse.Namespace) -> int:
+def compare(dssc, args: argparse.Namespace) -> int:
     """Run a compare on the specified MODULES vs Trunk/Version/Tag"""
-    return dm.compare(args.mods, args.module, args.tag, args.trunk, args.baseline)
+    return dssc.compare(args.mods, args.module, args.tag, args.trunk, args.baseline)
 
 
 @command()
-def vhistory(dm, args: argparse.Namespace) -> int:
+def vhistory(dssc, args: argparse.Namespace) -> int:
     """This command will display the version history for the module"""
     # FIXME: Check which Dsync output parser helpers should be used
-    dm.vhistory(args.module)
-    return 0
+    return dssc.vhistory(args.module)
 
 
 @command(setup=setup_check_tag_args)
-def overlay_tag(dm, args: argparse.Namespace) -> int:
+def overlay_tag(dssc, args: argparse.Namespace) -> int:
     """Overlay the specified tag in the specified modules and check-in"""
-    dm.overlay_tag(args.mods, args.module, args.tag)
-    return 0
+    return dssc.overlay_tag(args.mods, args.module, args.tag)
 
 
 def setup_mk_lib_args(parser):
@@ -577,16 +428,10 @@ def mk_lib(cad, args: argparse.Namespace) -> int:
 
 
 @command()
-def setup_ws(dm, args: argparse.Namespace) -> int:
+def setup_ws(dssc, args: argparse.Namespace) -> int:
     """Setup a workspace after it has been created"""
-    if dm.workspace_type == "Tapeout":
-        dm.setup_tapeout_ws(args.mods, dm.tapeout_tag)
-    elif dm.workspace_type == "Shared":
-        dm.setup_shared_ws(args.mods)
-    else:
-        dm.stclc_populate_workspace()
     # TODO - send email
-    return 0
+    return dssc.setup_ws()
 
 
 def setup_submit_args(parser):
@@ -613,31 +458,9 @@ def setup_submit_args(parser):
 
 
 @command(setup=setup_submit_args)
-def submit(dm, args: argparse.Namespace) -> int:
+def submit(dssc, args: argparse.Namespace) -> int:
     """Perform a SITaR submit / snapshot submit"""
-    user = getpass.getuser()
-    tag = args.snap
-    email = None
-    if not args.noemail:
-        config_dir = Path(os.environ["QC_CONFIG_DIR"])
-        fname = config_dir / "project.xml"
-        LOGGER.info("Parsing %s to find email to notify...", str(fname))
-        email = dm.parse_project_xml(fname)
-        # try:
-        #     email = parse_project_xml(fname)
-        # except:
-        #     Logger.error("Project.xml is not updated")
-        # else:
-        #     email = (f"{user}@qti.qualcomm.com")
-        LOGGER.info("Using email: %s", email)
-
-    return dm.submit(args.pop, tag, args.mods, args.module, args.comment, email=email)
-
-    # config_dir = Path(os.environ["QC_CONFIG_DIR"])
-    #     fname = config_dir / "project.xml"
-    #     LOGGER.info("Parsing %s to find email to notify...", str(fname))
-    #     email = parse_project_xml(fname)
-    #     LOGGER.info("Using email: %s", email)
+    return dssc.submit(args.snap, args.pop, args.comment, args.noemail)
 
 
 def setup_mk_tapeout_ws(parser):
@@ -653,18 +476,9 @@ def setup_mk_tapeout_ws(parser):
 
 
 @command(setup=setup_mk_tapeout_ws)
-def mk_tapeout_ws(dm, args: argparse.Namespace) -> int:
+def mk_tapeout_ws(dssc, args: argparse.Namespace) -> int:
     """Make the tapeout workspace for the project"""
-    tag = dm.get_tapeout_tag()
-    if args.tag:
-        tag = args.tag.lower()
-        if not tag.startswith("tapeout"):
-            LOGGER.error("The tag must start with tapeout.")
-            return 1
-    args.ws_name = tag
-    args.dev_name = dm.get_ws_devname()
-    dm.make_tapeout_ws(args.mods, tag)
-    return 0
+    return dssc.mk_tapeout_ws(args.tag)
 
 
 def setup_request_branch_args(parser):
@@ -684,7 +498,7 @@ def setup_request_branch_args(parser):
 
 
 @command(setup=setup_request_branch_args)
-def request_branch(dm, args: argparse.Namespace) -> int:
+def request_branch(dssc, args: argparse.Namespace) -> int:
     """Request a branch for the current project"""
     # TODO - should not start up the first shell for this command
     return 0
@@ -703,42 +517,28 @@ def setup_mk_branch_args(parser):
     parser.add_argument(
         "-n",
         "--tag",
-        help="Specify the tapeout tag for the branch",
+        help="Specify the flat tagname for the branch",
         metavar="TAG",
+        type=str,
+        default="",
+    )
+    parser.add_argument(
+        "-t",
+        "--tapeout",
+        help="Specify the tapeout tag for the branch",
+        metavar="TAPEOUT",
         type=str,
         default="",
     )
     parser.add_argument(
         "-c", "--comment", default=None, help="Provide a comment for the action"
     )
-    # TODO - if we cannot set the sitr alias, then we will need to specify the integrate workspace to use
 
 
 @command(setup=setup_mk_branch_args)
-def mk_branch(dm, args: argparse.Namespace) -> int:
+def mk_branch(dssc, args: argparse.Namespace) -> int:
     """Make a branch in the current workspace where the tapeout tag is populated"""
-    tag = dm.get_tapeout_tag()
-    if args.tag:
-        tag = args.tag.lower()
-        if not tag.startswith("tapeout"):
-            LOGGER.error("The tag must start with tapeout.")
-            return 1
-    url = dm.get_root_url(version=args.version)
-    if not dm.stclc_mod_exists(url):
-        LOGGER.error("The top level url ({url}) does not exist.")
-        return 2
-    if dm.workspace_type == "Tapeout":
-        LOGGER.error("Cannot make a branch in a Tapeout workspace.")
-        return 3
-    dm.stclc_populate_workspace()
-    if args.tag:
-        dm.populate_tag(args.mods, args.mods, args.tag)
-    mod_list = dm.get_sitr_update_list(args.mods)
-    dm.populate_configs(args.mods, mod_list)
-    args.mod_list = dm.flat_release_submit(args.mods, tag, args.comment)
-    if not args.mod_list:
-        return 3
-    return 0
+    return dssc.mk_branch(args.version, args.comment, args.tag, args.tapeout)
 
 
 def setup_mk_release_args(parser):
@@ -758,28 +558,9 @@ def setup_mk_release_args(parser):
 
 
 @command(setup=setup_mk_release_args)
-def mk_release(dm, args: argparse.Namespace) -> int:
+def mk_release(dssc, args: argparse.Namespace) -> int:
     """Make a SITaR select/integrate/release based on the current workspace"""
-    email = None
-    if not args.noemail:
-        config_dir = Path(os.environ["QC_CONFIG_DIR"])
-        fname = config_dir / "project.xml"
-        LOGGER.info("Parsing %s to find email to notify...", str(fname))
-        try:
-            email = dm.parse_project_xml(fname)
-        except:
-            Logger.error("Project.xml is not updated")
-        else:
-            email = f"{user}@qti.qualcomm.com"
-        LOGGER.info("Using email: %s", email)
-
-    args.mod_list = dm.flat_release_submit(
-        args.mods, args.snap, args.comment, email=email
-    )
-    if not args.mod_list:
-        return 1
-    args.version = args.snap
-    return 0
+    return dssc.mk_release(args.snap, args.comment, args.noemail)
 
 
 def setup_lookup_args(parser):
@@ -796,18 +577,10 @@ def setup_lookup_args(parser):
 
 
 @command(setup=setup_lookup_args)
-def lookup(dm, args: argparse.Namespace) -> int:
+def lookup(dssc, args: argparse.Namespace) -> int:
     """Generate a report of submits that are ready to integrate"""
     # TODO - add in support for the all switch
-    mod_list = dm.get_sitr_update_list(args.module)
-    if not mod_list:
-        LOGGER.info("No new submits to integrate")
-    elif args.output:
-        write_mod_versions(mod_list, args.output)
-    else:
-        # TODO - add in support for writing to a file
-        dm.display_mod_list(mod_list)
-    return 0
+    return dssc.lookup(args.output)
 
 
 def setup_integrate_args(parser):
@@ -827,19 +600,9 @@ def setup_integrate_args(parser):
 
 
 @command(setup=setup_integrate_args)
-def integrate(dm, args: argparse.Namespace) -> int:
+def integrate(dssc, args: argparse.Namespace) -> int:
     """Run integrate command (must be run as Integrator)"""
-    if args.input:
-        mod_list = read_mod_versions(args.input)
-    else:
-        mod_list = dm.get_sitr_update_list(args.module)
-    if not mod_list:
-        LOGGER.warn("Nothing to integrate")
-    else:
-        dm.display_mod_list(mod_list)
-        if Dsync.prompt_to_continue():
-            dm.sitr_integrate(mod_list)
-    return 0
+    return dssc.integrate(args.input)
 
 
 def setup_int_release_args(parser):
@@ -864,32 +627,9 @@ def setup_int_release_args(parser):
 
 
 @command(setup=setup_int_release_args)
-def int_release(dm, args: argparse.Namespace) -> int:
+def int_release(dssc, args: argparse.Namespace) -> int:
     """Perform a SITaR integrate and release (must be run as Integrator)"""
-    if args.input:
-        mod_list = read_mod_versions(args.input)
-    else:
-        mod_list = dm.get_sitr_update_list(args.module)
-    if not mod_list:
-        LOGGER.warn("Nothing to integrate")
-    else:
-        dm.display_mod_list(mod_list)
-        if Dsync.prompt_to_continue():
-            dm.sitr_integrate(mod_list)
-    email = None
-    if not args.noemail:
-        config_dir = Path(os.environ["QC_CONFIG_DIR"])
-        fname = config_dir / "project.xml"
-        LOGGER.info("Parsing %s to find email to notify...", str(fname))
-        try:
-            email = dm.parse_project_xml(fname)
-        except:
-            Logger.error("Project.xml is not updated")
-        else:
-            email = f"{user}@qti.qualcomm.com"
-        LOGGER.info("Using email: %s", email)
-
-    return dm.sitr_release(args.comment, email=email)
+    return dssc.int_release(args.comment, args.input, args.noemail)
 
 
 def setup_release_args(parser):
@@ -903,21 +643,9 @@ def setup_release_args(parser):
 
 
 @command(setup=setup_release_args)
-def release(dm, args: argparse.Namespace) -> int:
+def release(dssc, args: argparse.Namespace) -> int:
     """Perform a SITaR release only (must be run as Integrator)"""
-    email = None
-    if not args.noemail:
-        config_dir = Path(os.environ["QC_CONFIG_DIR"])
-        fname = config_dir / "project.xml"
-        LOGGER.info("Parsing %s to find email to notify...", str(fname))
-        try:
-            email = dm.parse_project_xml(fname)
-        except:
-            Logger.error("Project.xml is not updated")
-        else:
-            email = f"{user}@qti.qualcomm.com"
-        LOGGER.info("Using email: %s", email)
-    return dm.sitr_release(args.comment, email=email)
+    return dssc.release(args.comment, args.noemail)
 
 
 def setup_args_parser():
@@ -936,33 +664,6 @@ def setup_args_parser():
         action="store_true",
         help="Add in the force switch to populates",
     )
-    # parser.add_argument(
-    #     "-U",
-    #     "--update_snap",
-    #     action="store_true",
-    #     help="Put the specified module into update mode and populate the latest tag",
-    # )
-    # parser.add_argument(
-    #     "-r",
-    #     "--restore",
-    #     action="store_true",
-    #     help="Restore the specified module to the latest baseline",
-    # )
-    # parser.add_argument(
-    #     "-C", "--checkin", action="store_true", help="Check in the module"
-    # )
-    # parser.add_argument(
-    #     "-P", "--pop_tag", help="Populate the specified tag of the selected module"
-    # )
-    # parser.add_argument(
-    #     "-g", "--tag_sch", help="Tag the schematics/symbols in the module"
-    # )
-    # parser.add_argument(
-    #     "-l",
-    #     "--lookup",
-    #     action="store_true",
-    #     help="Do a lookup for submits not yet integrated",
-    # )
     parser.add_argument(
         "-c", "--comment", default=None, help="Provide a comment for the action"
     )
@@ -1048,20 +749,12 @@ def setup_args_parser():
     return args
 
 
-def dump_dss_logfile_to_log(dm):
-    """Log where Dsync will log commands."""
-    resp = dm.shell.run_command("log")
 
-    for line in resp.splitlines():
-        if "Logfile:" in line:
-            LOGGER.debug(line.strip())
-
-
-def run_dmshell_with_args(args, dm) -> int:
+def run_dmshell_with_args(args, dssc) -> int:
     """Run the interactive shell to start stclc for dsync commands."""
     # run through bsub by default, but only for int_release and integrate, otherwise - locally
     exit_code = 0
-    with dm.shell.run_shell():
+    with dssc.shell.run_shell():
         args.comment = get_comment(
             args.checkin,
             args.submit,
@@ -1073,16 +766,11 @@ def run_dmshell_with_args(args, dm) -> int:
             args.mk_branch,
             args.comment,
         )
-        wait_for_shell_with_timeout(dm.shell)
+        wait_for_shell_with_timeout(dssc.shell)
 
-        dump_dss_logfile_to_log(dm)
-        run_cdws(dm)
-
-        # TODO - add an option to create a JIRA ticket
-        # FIXME: Nasty hack
-        setattr(args, "module_given", bool(args.module))
-        sitr_mods, modules = get_sitr_modules(
-            dm,
+        dssc.initial_setup()
+        get_sitr_modules(
+            dssc,
             args.module,
             args.update,
             args.update_snap,
@@ -1094,47 +782,35 @@ def run_dmshell_with_args(args, dm) -> int:
             args.submit,
             args.snapshot,
         )
-        args.mods = sitr_mods
-        args.module = modules
+
+        # TODO - add an option to create a JIRA ticket
         if args.interactive:
             import IPython
 
             IPython.embed()
         elif args.command and callable(args.func):
             LOGGER.debug("RUNNING: %s", args.command)
-            exit_code = args.func(dm, args)
+            exit_code = args.func(dssc, args)
             # TODO - need to send the exit command
     return exit_code
 
 
-def run_intshell_with_args(args, dm) -> int:
+def run_intshell_with_args(args, dssc) -> int:
     """Run the interactive shell to start stclc in the integrator mode."""
-    dm.force_integrate_mode()
-    with dm.shell.run_shell():
-        wait_for_shell_with_timeout(dm.shell)
-        run_cdws(dm)
+    dssc.force_integrate_mode()
+    if args.mk_branch:
+        dssc.wtf_set_dev_dir()
+    with dssc.shell.run_shell():
+        wait_for_shell_with_timeout(dssc.shell)
+        dssc.initial_setup()
         if args.mk_release:
-            dm.sitr_integrate(args.mod_list, nopop=True)
-            dm.sitr_release(args.comment, skip_check=True, on_server=True)
+            dssc.mk_release_int(args.comment)
             # TODO - send email
         if args.request_branch:
-            sitr_alias = f"baseline_{args.version}"
-            email = None
-            if not args.noemail:
-                email = "dmrfa.help"  # This will generate a JIRA ticket
-                LOGGER.info("Using email: %s", email)
-            dm.create_branch(args.version, sitr_alias, args.comment, email=email)
+            dssc.request_branch(args.version, args.comment)
 
         if args.mk_branch:
-            sitr_alias = f"baseline_{args.version}"
-            # TODO - need to add this back
-            # dm.force_version(sitr_alias)
-            mod_list = dm.branch_modules(
-                args.mods, args.mod_list, args.version, args.comment
-            )
-            # if not mod_list:
-            #    dm.sitr_integrate(mod_list, nopop=True)
-            #    dm.sitr_release(args.comment, skip_check=True, on_server=True)
+            dssc.mk_branch_int(args.version, args.comment)
     return 0
 
 
@@ -1167,30 +843,30 @@ def run_with_args(args) -> int:
 
     is_release_or_integrate = args.command in ("int_release", "integrate")
     bsub_mode = not getattr(args, "local", False) and is_release_or_integrate
-    dm, dm_shell = setup_dmsh(start_dir, args.test, bsub_mode=bsub_mode)
+    dssc, dm_shell = setup_dmsh(start_dir, args.test, bsub_mode=bsub_mode)
 
     if not args.command in ("mk_lib", "request_branch"):
-        exit_code = run_dmshell_with_args(args, dm)
+        exit_code = run_dmshell_with_args(args, dssc)
         if exit_code:
             return exit_code
 
-    if args.command in ("mk_lib",):
+    if args.command in ("mk_lib"):
         start_dir = os.environ["PROJ_USER_WORK"]
         cad = Cadence.Cadence(cwd=start_dir, test_mode=args.test)
-        ciw_shell = Process.Process()
+        ciw_shell = dm.Process()
         cad.configure_shell(ciw_shell)
         exit_code = run_cadshell_with_args(args, cad)
         if exit_code:
             return exit_code
 
-    if args.command in ("mk_tapeout_ws",):
+    if args.command in ("mk_tapeout_ws"):
         config = sitar.get_config()
         ws = sitar.init_ws_builder(config, args.dev_name, args.ws_name)
         ws.create_shared_ws(args.ws_name)
 
     # Relaunch the DM shell as the integrator
     if args.command in ("mk_release", "request_branch", "mk_branch"):
-        exit_code = run_intshell_with_args(args, dm)
+        exit_code = run_intshell_with_args(args, dssc)
         if exit_code:
             return exit_code
     return 0
