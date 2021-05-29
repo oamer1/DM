@@ -227,7 +227,7 @@ class Wtf_dm(dm.Sitar_dm):
                 LOGGER.info("Parsing %s to find email to notify...", str(fname))
                 email = dm.parse_project_xml(fname)
             except AttributeError:
-                Logger.error("Project.xml is not updated")
+                LOGGER.error("Project.xml is not updated")
             else:
                 LOGGER.info(f"project.xml is not updated, sending email to {user}")
                 email = f"{user}@qti.qualcomm.com"
@@ -324,7 +324,7 @@ class Wtf_dm(dm.Sitar_dm):
                 LOGGER.info("Parsing %s to find email to notify...", str(fname))
                 email = dm.parse_project_xml(fname)
             except AttributeError:
-                Logger.error("Project.xml is not updated")
+                LOGGER.error("Project.xml is not updated")
             else:
                 print(f"project.xml is not updated, sending email to {user}")
                 email = f"{user}@qti.qualcomm.com"
@@ -390,7 +390,7 @@ class Wtf_dm(dm.Sitar_dm):
                 LOGGER.info("Parsing %s to find email to notify...", str(fname))
                 email = dm.parse_project_xml(fname)
             except AttributeError:
-                Logger.error("Project.xml is not updated")
+                LOGGER.error("Project.xml is not updated")
             else:
                 print(f"project.xml is not updated, sending email to {user}")
                 email = f"{user}@qti.qualcomm.com"
@@ -408,7 +408,7 @@ class Wtf_dm(dm.Sitar_dm):
                 LOGGER.info("Parsing %s to find email to notify...", str(fname))
                 email = dm.parse_project_xml(fname)
             except AttributeError:
-                Logger.error("Project.xml is not updated")
+                LOGGER.error("Project.xml is not updated")
             else:
                 print(f"project.xml is not updated, sending email to {user}")
                 email = f"{user}@qti.qualcomm.com"
