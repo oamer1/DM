@@ -18,21 +18,21 @@ LOGGER = logging.getLogger(__name__)
 
 # TODO - should this be a class?
 class WS_Builder(object):
-    """ Class for creating a SITaR based workspace
+    """Class for creating a SITaR based workspace
 
-        Attributes:
-            sitr_env: environment variables used for sda
-            proj_env: environment variables for the shell
-            project_dir: path to the root location of the workspace
-            work_dir: path to the working directory for sda
-            user_dir: path to the user directory where cadence is launched
-            ws_name: name of the sitr workspace
-            dsgn_proj: path to the design project location
-            container_name: name of the top container
-            development_name: name of the specific chip project
-            config_root: path for the config location for sda
-            test_mode: when true, do not run any actual commands
-            role: set to Design or Integrate
+    Attributes:
+        sitr_env: environment variables used for sda
+        proj_env: environment variables for the shell
+        project_dir: path to the root location of the workspace
+        work_dir: path to the working directory for sda
+        user_dir: path to the user directory where cadence is launched
+        ws_name: name of the sitr workspace
+        dsgn_proj: path to the design project location
+        container_name: name of the top container
+        development_name: name of the specific chip project
+        config_root: path for the config location for sda
+        test_mode: when true, do not run any actual commands
+        role: set to Design or Integrate
     """
 
     def __init__(self) -> None:

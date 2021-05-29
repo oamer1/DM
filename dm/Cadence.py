@@ -33,7 +33,8 @@ except ImportError:
 
 LOGGER = logging.getLogger(__name__)
 
-def checkout_cds_files(dm: 'Dsync', files: List) -> bool:
+
+def checkout_cds_files(dm: "Dsync", files: List) -> bool:
     """Given a list of cds.lib files, check them out for edit and ensure they are writable"""
     for file in files:
         dm.stclc_check_out(file)
@@ -42,7 +43,8 @@ def checkout_cds_files(dm: 'Dsync', files: List) -> bool:
             return False
     return True
 
-def checkin_files(dm: 'Dsync', libs_to_add: List) -> None:
+
+def checkin_files(dm: "Dsync", libs_to_add: List) -> None:
     comment = "Creating the libraries"
     files = ""
     for (cds_file, lib_name) in libs_to_add:
@@ -51,10 +53,12 @@ def checkin_files(dm: 'Dsync', libs_to_add: List) -> None:
         comment += " " + lib_name
     dm.stclc_check_in(files, comment)
 
-def get_cds_file(mod_path: 'Path', lib: str) -> 'Path':
-    if lib.upper().endswith('_SIM'):
+
+def get_cds_file(mod_path: "Path", lib: str) -> "Path":
+    if lib.upper().endswith("_SIM"):
         return mod_path / "sim_libs" / "cds.lib.sim_libs"
     return mod_path / "design_libs" / "cds.lib.design_libs"
+
 
 # TODO - should this be a class? Use dependency injection instead of extending
 class Cadence(object):
@@ -64,11 +68,11 @@ class Cadence(object):
         self.dsgn_proj = self.get_dsgn_proj()
         self.test_mode = test_mode
 
-    def configure_shell(self, shell: 'Process') -> None:
-        shell.command = '/pkg/icetools/bin/virtuoso -no_ver_check -qc_memory 6000 -qc_64bit -qc_queue interactive -nograph'
-        shell.prompt = 'CIW>'
+    def configure_shell(self, shell: "Process") -> None:
+        shell.command = "/pkg/icetools/bin/virtuoso -no_ver_check -qc_memory 6000 -qc_64bit -qc_queue interactive -nograph"
+        shell.prompt = "CIW>"
         shell.start_cmd = 'setPrompts("CIW> " "<%d> CIW> ")'
-        shell.end_cmd = 'exit'
+        shell.end_cmd = "exit"
         shell.init_timeout = 30000
         shell.timeout = 8
         shell.cwd = self.start_dir
@@ -91,7 +95,7 @@ class Cadence(object):
             libs_to_add.append(tuple([cds_file, lib]))
         return (files_to_checkout, libs_to_add)
 
-    def find_module(self, mod: str = "") -> 'Path':
+    def find_module(self, mod: str = "") -> "Path":
         for dir in self.dsgn_proj.iterdir():
             if Path(dir / mod.lower()).exists():
                 return dir / mod.lower()
@@ -100,11 +104,11 @@ class Cadence(object):
 
     def get_dsgn_proj(self) -> None:
         """Try to find the Design Project folder (start of managed area)"""
-        if 'DSGN_PROJ' in os.environ:
-            return Path(os.environ['DSGN_PROJ'])
+        if "DSGN_PROJ" in os.environ:
+            return Path(os.environ["DSGN_PROJ"])
 
         for dir in self.start_dir.iterdir():
-            if Path(dir / 'cds.lib.project').exists():
+            if Path(dir / "cds.lib.project").exists():
                 return dir
         return None
 
@@ -113,29 +117,54 @@ class Cadence(object):
         for (cds_file, lib_name) in libs_to_add:
             self.make_cadence_lib(cds_file, lib_name)
 
-    def make_cadence_lib(self, cds_file: 'Path', lib: str) -> None:
+    def make_cadence_lib(self, cds_file: "Path", lib: str) -> None:
         # TODO - check resp?
-        resp = self.shell.run_command(f'changeWorkingDir("{cds_file.parent.resolve()}")')
+        resp = self.shell.run_command(
+            f'changeWorkingDir("{cds_file.parent.resolve()}")'
+        )
         resp = self.shell.run_command(f'ddSetForcedLib("{cds_file.resolve()}")')
-        resp = self.shell.run_command(f'qcCreateLib("{lib}" "./{lib}" qcVars->technologyLib qcVars->process "sync")')
+        resp = self.shell.run_command(
+            f'qcCreateLib("{lib}" "./{lib}" qcVars->technologyLib qcVars->process "sync")'
+        )
         resp = self.shell.run_command(f'qcSetDMTYPEForLib("./{lib}")')
+
 
 def main():
     """Main routine that is invoked when you run the script"""
     parser = argparse.ArgumentParser(
-        description='Script to automatically create Cadence Libraries.',
+        description="Script to automatically create Cadence Libraries.",
         add_help=True,
-        argument_default=None  # Global argument default
-        )
-    parser.add_argument('libs', metavar='Cadence Libs', type=str, nargs='+', help='List of library names')
-    parser.add_argument('-m', '--module', required=True, help="Specify the destination module")
-    parser.add_argument('-w', '--workspace', help="Specify the workspace where to launch cadence")
-    parser.add_argument('-d', '--debug', action='store_true', help="enable debug outputs")
-    parser.add_argument('-l', '--lib', action='store_true', help="Create the specified libraries")
-    parser.add_argument('-I', '--interactive', action='store_true',
-                        help="enable an interactive session")
-    parser.add_argument('-t', '--test', action='store_true', help="run the doc tester")
-    parser.add_argument('-T', '--test_mode', action='store_true', help="Run in test mode without actually changing things")
+        argument_default=None,  # Global argument default
+    )
+    parser.add_argument(
+        "libs",
+        metavar="Cadence Libs",
+        type=str,
+        nargs="+",
+        help="List of library names",
+    )
+    parser.add_argument(
+        "-m", "--module", required=True, help="Specify the destination module"
+    )
+    parser.add_argument(
+        "-w", "--workspace", help="Specify the workspace where to launch cadence"
+    )
+    parser.add_argument(
+        "-d", "--debug", action="store_true", help="enable debug outputs"
+    )
+    parser.add_argument(
+        "-l", "--lib", action="store_true", help="Create the specified libraries"
+    )
+    parser.add_argument(
+        "-I", "--interactive", action="store_true", help="enable an interactive session"
+    )
+    parser.add_argument("-t", "--test", action="store_true", help="run the doc tester")
+    parser.add_argument(
+        "-T",
+        "--test_mode",
+        action="store_true",
+        help="Run in test mode without actually changing things",
+    )
     args = parser.parse_args()
 
     if args.debug:
@@ -145,10 +174,11 @@ def main():
 
     if args.test:
         import doctest
+
         doctest.testmod()
 
-    #start_dir = "/prj/analog/blaster/sandiego/chips/blaster/blaster_v100/work/jcoates"
-    #start_dir = "/prj/analog/wanip/sec14ff/chips/caster/caster_v100/work/jcoates"
+    # start_dir = "/prj/analog/blaster/sandiego/chips/blaster/blaster_v100/work/jcoates"
+    # start_dir = "/prj/analog/wanip/sec14ff/chips/caster/caster_v100/work/jcoates"
 
     cad = Cadence(cwd=args.workspace, test_mode=args.test_mode)
     # TODO - need to check to make sure dsgn_proj is defined
@@ -161,7 +191,9 @@ def main():
         cad.configure_shell(ciw_shell)
         with ciw_shell.run_shell():
             # TODO - need a try-catch block
-            (files_to_checkout, libs_to_add) = cad.check_libraries(args.module, args.libs)
+            (files_to_checkout, libs_to_add) = cad.check_libraries(
+                args.module, args.libs
+            )
 
             if Dsync.prompt_to_continue():
                 print("Waiting for DM shell")
@@ -184,9 +216,10 @@ def main():
                 # TODO - report error?
 
             if args.interactive:
-                import IPython # type: ignore
-                IPython.embed() # jump to ipython shell
+                import IPython  # type: ignore
+
+                IPython.embed()  # jump to ipython shell
+
 
 if __name__ == "__main__":
     main()
-

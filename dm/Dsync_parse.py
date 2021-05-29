@@ -178,12 +178,11 @@ def process_sitr_update_list(self, resp_list: List[str]) -> List:
             new_item = settings
             new_item["module"] = root_mod
             new_item["date"] = int(settings["date"])
-            prev_date = (
-                update_list[root_mod]["date"] if root_mod in update_list else 0
-            )
+            prev_date = update_list[root_mod]["date"] if root_mod in update_list else 0
             if new_item["date"] > prev_date:
                 update_list[root_mod] = new_item
     return update_list
+
 
 def parse_sitr_modules(resp) -> Dict:
     """return the SITaR modules and their status"""
@@ -198,6 +197,7 @@ def parse_sitr_modules(resp) -> Dict:
             modules[first_item[:-2]] = dict(zip(keys, items[1:]))
     return modules
 
+
 def process_sitr_update_list(resp_list: List[str]) -> List:
     """get a list of newly submitted modules that can be integrated"""
     resp_str = " ".join([resp.split("\n")[0] for resp in resp_list])
@@ -211,9 +211,7 @@ def process_sitr_update_list(resp_list: List[str]) -> List:
             new_item = settings
             new_item["module"] = root_mod
             new_item["date"] = int(settings["date"])
-            prev_date = (
-                update_list[root_mod]["date"] if root_mod in update_list else 0
-            )
+            prev_date = update_list[root_mod]["date"] if root_mod in update_list else 0
             if new_item["date"] > prev_date:
                 update_list[root_mod] = new_item
     return update_list
@@ -257,4 +255,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
