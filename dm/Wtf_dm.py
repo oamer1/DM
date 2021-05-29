@@ -341,7 +341,7 @@ class Wtf_dm(dm.Sitar_dm):
                 config_dir = Path(os.environ["QC_CONFIG_DIR"])
                 fname = config_dir/ "project.xml"
                 LOGGER.info("Parsing %s to find email to notify...", str(fname))
-                email = parse_xml.parse_project_xml(fname)
+                email = dm.parse_project_xml(fname)
             except AttributeError :
                 Logger.error("Project.xml is not updated")
             else:
@@ -411,7 +411,7 @@ class Wtf_dm(dm.Sitar_dm):
                 config_dir = Path(os.environ["QC_CONFIG_DIR"])
                 fname = config_dir/ "project.xml"
                 LOGGER.info("Parsing %s to find email to notify...", str(fname))
-                email = parse_xml.parse_project_xml(fname)
+                email = dm.parse_project_xml(fname)
             except AttributeError :
                 Logger.error("Project.xml is not updated")
             else:
@@ -429,7 +429,7 @@ class Wtf_dm(dm.Sitar_dm):
                 config_dir = Path(os.environ["QC_CONFIG_DIR"])
                 fname = config_dir/ "project.xml"
                 LOGGER.info("Parsing %s to find email to notify...", str(fname))
-                email = parse_xml.parse_project_xml(fname)
+                email = dm.parse_project_xml(fname)
             except AttributeError :
                 Logger.error("Project.xml is not updated")
             else:
