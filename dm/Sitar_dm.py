@@ -28,6 +28,25 @@ LOGGER = log.getLogger(__name__)
 
 import dm
 
+def get_sitr_proj_info(chip_name: str, chip_version: str) -> Tuple:
+    """get the project name and container name for a SITaR project"""
+    project_name = chip_name + "_" + chip_version
+    container_name = chip_name.upper()
+    return (project_name, container_name)
+
+
+def get_sitr_dev_info(base_path: "Path", project_name: str) -> Tuple:
+    """get the development dir and development name"""
+    development_dir = base_path / project_name.lower()
+    development_name = project_name.upper()
+    return (development_dir, development_name)
+
+
+def get_sitr_config_root(development_dir: "Path", config_name: str) -> "Path":
+    """get the config root directory for SITaR"""
+    config_root = development_dir / "DesignSync" / "Settings" / config_name
+    return config_root
+
 
 def get_sitr_root_dir(dir: str = "") -> "Path":
     """Check the environment variables for the sitar workspace or search"""
@@ -49,7 +68,6 @@ def find_sitr_root_dir(dir: str = "") -> "Path":
     while path.parents and not Path(path / ".cshrc.project").exists():
         path = path.parent
     return path
-
 
 class Sitar_dm(dm.Dsync_dm):
     """Class for accessing Design Sync
@@ -79,7 +97,7 @@ class Sitar_dm(dm.Dsync_dm):
 
     def force_version(self, dev_dir: "Path") -> None:
         """set the baseline version of the workspace"""
-        config_root = get_sitr_config_root(dev_dir, "Analog")
+        config_root = dm.get_sitr_config_root(dev_dir, "Analog")
         self.shell.env["SYNC_PROJECT_CFGDIR"] = str(config_root / "Setting")
         self.shell.env["SYNC_PROJECT_CFGDIR_ROOT"] = str(config_root)
         self.shell.env["SYNC_DEVELOPMENT_DIR"] = str(dev_dir)
@@ -273,7 +291,7 @@ class Sitar_dm(dm.Dsync_dm):
         ):
             return True
         if email is not None:
-            # prj, pr = url.split("%")
+            #prj, pr = url.split("%")
 
             user = getpass.getuser()
 
@@ -282,9 +300,9 @@ class Sitar_dm(dm.Dsync_dm):
 
             DEVELOPMENT_DIR = Path(os.environ["SYNC_DEVELOPMENT_DIR"])
             sitar_env = self.shell.run_command("sitr env")
-            data = [k for k in sitar_env.split("\n") if len(k) > 3 and k != "="]
-            data1 = [k for k in data if any(s in k for s in "=")]
-            data2 = {k.split("=")[0].strip(): k.split("=")[1].strip() for k in data1}
+            data = [k for k in sitar_env.split('\n') if len(k)>3 and  k != "=" ]
+            data1 = [k for k in data if any(s in k for s in "=") ]
+            data2 = {k.split('=')[0].strip():k.split('=')[1].strip() for k in data1}
             content = {
                 "DEVELOPMENT_DIR": DEVELOPMENT_DIR,
                 "prj": f"{url}",
@@ -327,21 +345,19 @@ class Sitar_dm(dm.Dsync_dm):
 
         mod_list = {}
         for branch in branches:
-            url = self.dssc_get_root_url(
-                module=branch["module"], version=branch["version"]
-            )
+            url = self.dssc_get_root_url(module=branch["module"], version=branch["version"])
             branched_url = self.dssc_get_root_url(
                 module=branch["module"], version=f"{version}_v1.1"
             )
-            print(f"Branch {url} -> {branched_url}")
-            if self.stclc_create_branch(url, version, comment):
-                errors = True
+            if self.stclc_mod_exists(branched_url):
+                # TODO - should this be an error?
+                LOGGER.warn(f"the sitr module ({branched_url}) already exists")
+            else:
+                if self.stclc_create_branch(url, version, comment):
+                    errors = True
             if not self.stclc_mod_exists(branched_url):
                 LOGGER.error(f"could not create the sitr module ({branched_url})")
-            mod_list[branch["module"]] = {
-                "module": branch["module"],
-                "tagName": f"{version}_v1.1",
-            }
+            mod_list[branch['module']] = {"module": branch['module'], "tagName": f"{version}_v1.1"}
         if errors:
             return {}
         return mod_list
@@ -377,9 +393,7 @@ class Sitar_dm(dm.Dsync_dm):
             print(f"Scanning {mod}")
             self.stclc_compare(args, args2)
 
-    def sitr_check_tag(
-        self, sitr_mods: List[Dict], modules: List[str], tag: str
-    ) -> None:
+    def sitr_check_tag(self, sitr_mods: List[Dict], modules: List[str], tag: str) -> None:
         """Check the specified tag and display the versions of the files that were tagged"""
         if not tag:
             tag = self.stclc_get_branch()
@@ -421,9 +435,7 @@ class Sitar_dm(dm.Dsync_dm):
             return True
         return False
 
-    def sitr_overlay_tag(
-        self, sitr_mods: List[Dict], modules: List[str], tag: str
-    ) -> None:
+    def sitr_overlay_tag(self, sitr_mods: List[Dict], modules: List[str], tag: str) -> None:
         """Display a list of the files checked out in the specified modules"""
         errors = []
         for mod in modules:
@@ -510,9 +522,9 @@ class Sitar_dm(dm.Dsync_dm):
                 self.io.display_mod_files(files)
                 errors.add(mod)
                 continue
-            # files = self.dssc_ls_modules(mod, modified=True)
-            # LOGGER.debug(f"results from show modified = {files}")
-            # if files:
+            #files = self.dssc_ls_modules(mod, modified=True)
+            #LOGGER.debug(f"results from show modified = {files}")
+            #if files:
             #    LOGGER.warn(
             #        f"The module {mod} has modified files and cannot be submitted"
             #    )
@@ -545,7 +557,6 @@ class Sitar_dm(dm.Dsync_dm):
             selector = sitr_mods[mod]["selector"]
             args = f'-rec -immutable -comment "{comment}"'
             hrefs = self.dssc_get_hrefs(mod)
-            print(f"Hrefs = {hrefs}")
             if hrefs:
                 args += f" -filter {','.join([x['relpath'] for x in hrefs])}"
             if self.stclc_tag_files(snap_tag, path, args=args):
@@ -691,13 +702,18 @@ class Sitar_dm(dm.Dsync_dm):
 
     def process_sitr_update_list(self, resp_list: List[str]) -> List:
         """get a list of newly submitted modules that can be integrated"""
+        # Check what branch we're on
+        branch = self.stclc_get_branch()
+        # Only allow tags with certain prefixes, based on the branch
+        is_trunk = "trunk" in branch.lower()
+        allowed_prefixes = ["REL_", "v1."] if is_trunk else [branch]
         resp_str = " ".join([resp.split("\n")[0] for resp in resp_list])
         # TODO - need to support the all switch with multiple submits
         update_list = {}
         kv_resp = dm.parse_kv_response(f"{resp_str}")
         for url, settings in kv_resp.items():
             (base_url, selector) = url.split("@")
-            if re.search(r"v\d\.\d+$", selector):
+            if any(selector.startswith(p) for p in allowed_prefixes) and re.search(r"v\d\.\d+$", selector):
                 root_mod = base_url.split("/")[-1]
                 new_item = settings
                 new_item["module"] = root_mod
@@ -714,24 +730,10 @@ class Sitar_dm(dm.Dsync_dm):
     ) -> bool:
         """run the SITaR integrate"""
         errors = []
-        print(f"mod list {mod_list}")
         if mod_list:
-            # Check what branch we're on
-            branch = self.stclc_get_branch()
-            # Only allow tags with certain prefixes, based on the branch
-            # TODO - this filter needs to be in lookup not integrate
-            is_trunk = "trunk" in branch.lower()
-            allowed_prefixes = ["REL_", "v1."] if is_trunk else [branch]
             for module, mod in mod_list.items():
                 module_name = mod["module"]
                 module_tag = mod["tagName"]
-                if not any(module_tag.startswith(p) for p in allowed_prefixes):
-                    LOGGER.warning(
-                        f"Ignoring not allowed tag {module_tag} for module {module_name} on selector {branch}"
-                    )
-                    # TODO - raise exception?
-                    continue
-                # TODO - are errors detected?
                 print(f"Integrating mod {module_name} with tag {module_tag}")
                 if self.stclc_add_sitr_mod(module_name, module_tag):
                     # TODO - raise exception?
@@ -816,7 +818,6 @@ class Sitar_dm(dm.Dsync_dm):
             attachment=attachment,
         )
 
-
 def main():
     """Main routine that is invoked when you run the script"""
     parser = argparse.ArgumentParser(
@@ -847,12 +848,12 @@ def main():
     if args.debug:
         log.set_debug()
     # Hack to work around Dsync symlinks
-    # path_of_script = Path(__file__).absolute().parent
-    # sys.path.append(str(path_of_script))
-    # from Spreadsheet_if import Spreadsheet_xls
+    #path_of_script = Path(__file__).absolute().parent
+    #sys.path.append(str(path_of_script))
+    #from Spreadsheet_if import Spreadsheet_xls
 
-    # ss = Spreadsheet_xls()
-    # if args.xls:
+    #ss = Spreadsheet_xls()
+    #if args.xls:
     #    ss.open_ss(args.xls)
     #    ss.set_active_sheet_no(0)
     #    ss.set_header_key("CORE NAME")
