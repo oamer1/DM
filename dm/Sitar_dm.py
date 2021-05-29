@@ -20,6 +20,7 @@ from textwrap import dedent
 from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Tuple
+import getpass
 
 import log
 
@@ -199,16 +200,25 @@ class Sitar_dm(dm.Dsync_dm):
         self, modules: List[str], comment: str, skipcheck: bool = False, email=None
     ) -> bool:
         """submit the specified modules"""
-        
-        errors = self.stclc_submit_module(modules, comment, skipcheck)
+        errors = {}
+        vers = {}
+        args = f'{"-skipcheck" if skipcheck else ""}'
+        for mod in modules:
+            resp = self.shell.run_command(
+                f'set resp [sitr submit -force -comment "{comment}" {args} {mod}]'
+            )
+
+            if resp:
+                errors[mod] = resp
+                vers[mod] = resp.partition("Tagging:")[-1]
 
         if errors:
             for mod in errors:
-                LOGGER.error(f"submit module {mod} - {errors[mod]['resp']}")
+                LOGGER.error(f"submit module {mod} - {errors[mod]}")
 
             if email is not None:
                 for mod in vers:
-                    ver = errors[mod]['vers'].partition(" : Added")[-1].splitlines()[0].strip()
+                    ver = vers[mod].partition(" : Added")[-1].splitlines()[0].strip()
                     content = {
                         "mod": mod,
                         "mods": ",".join(modules),
@@ -262,7 +272,8 @@ class Sitar_dm(dm.Dsync_dm):
         ):
             return True
         if email is not None:
-            prj, pr = url.split("%")
+            #prj, pr = url.split("%")
+
             user = getpass.getuser()
 
             SYNC_DIR = Path(os.environ["SYNC_DEVAREA_DIR"])
@@ -271,11 +282,11 @@ class Sitar_dm(dm.Dsync_dm):
             DEVELOPMENT_DIR = Path(os.environ["SYNC_DEVELOPMENT_DIR"])
             sitar_env = self.shell.run_command("sitr env")
             data = [k for k in sitar_env.split('\n') if len(k)>3 and  k != "=" ]
-            data1 = [k for k in data if any(s in k for s in "=") ] 
-            data2 = {k.split('=')[0].strip():k.split('=')[1].strip() for k in data1} 
+            data1 = [k for k in data if any(s in k for s in "=") ]
+            data2 = {k.split('=')[0].strip():k.split('=')[1].strip() for k in data1}
             content = {
                 "DEVELOPMENT_DIR": DEVELOPMENT_DIR,
-                "prj": prj,
+                "prj": f"{url}",
                 "version": version,
                 "Container_Workspace": data2["Container Workspace"],
                 "user": user,
@@ -786,7 +797,7 @@ class Sitar_dm(dm.Dsync_dm):
         attachment: "Path" = None,
     ):
         email_user = getpass.getuser()
-        send_email(
+        dm.send_email(
             self,
             sender=email_user,
             recipients=[email],
@@ -858,5 +869,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
