@@ -92,7 +92,7 @@ class Dsync_dm():
     def dump_dss_logfile_to_log(self):
         """Log where Dsync will log commands."""
         resp = self.shell.run_command("log")
-            
+
         for line in resp.splitlines():
             if "Logfile:" in line:
                 LOGGER.debug(line.strip())
@@ -294,23 +294,6 @@ class Dsync_dm():
             return True
         return False
 
-    def stclc_submit_module(
-        self, modules: List[str], comment: str, skipcheck: bool = False
-    ) -> List[Dict]:
-        """submit the specified modules"""
-
-        errors = {}
-        vers = {}
-        args = f'{"-skipcheck" if skipcheck else ""}'
-        for mod in modules:
-            resp = self.shell.run_command(
-                f'sitr submit -force -comment "{comment}" {args} {mod}'
-            )
-
-            if resp:
-                errors[mod] = {'resp': resp, 'vers': resp.partition("Tagging:")[-1]}
-
-        return errors
 
     def stclc_integrate(self, nopop: bool = False) -> str:
         """run the sitr integrate command"""
@@ -331,7 +314,7 @@ class Dsync_dm():
         self.shell.stream_command_disp(f'set resp [sitr release -comment "{comment}" {args}]', self.test_mode)
         return self.stclc_puts_resp()
 
-    def stclc_create_branch(self, url: str, version: str, comment: str) -> bool:
+    def stclc_create_branch(self, url: str, version: str, comment: str, email=None) -> bool:
         self.shell.stream_command_disp(
             f'set resp [sitr mkbranch -comment "{comment}" {version} {url}]',
             self.test_mode
@@ -610,4 +593,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
