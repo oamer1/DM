@@ -12,12 +12,24 @@ from functools import wraps
 from pathlib import Path
 from typing import List, Dict, Iterable, Optional
 
-import log
 
-LOGGER = log.getLogger(__name__)
 
-import dm
 
+
+user = getpass.getuser()
+
+try:
+    import log
+
+    LOGGER = log.getLogger(__name__)
+except ImportError:
+    import logging
+
+    LOGGER = logging.getLogger(__name__)
+try:
+    import dm
+except ImportError:
+    import Process
 
 class Wtf_dm(dm.Sitar_dm):
     """Class for accessing Design Sync
@@ -70,7 +82,7 @@ class Wtf_dm(dm.Sitar_dm):
                     LOGGER.warn(f"The module {mod} is not in update mode")
                     continue
             self.modules.append(mod)
-    
+
     def populate(self, force: bool = False) -> int:
         """Populate a SITaR workspace"""
         if self.workspace_type == "Tapeout":
@@ -228,10 +240,16 @@ class Wtf_dm(dm.Sitar_dm):
         email = None
         if not noemail:
             # TODO - this should use the Batman settings env var
-            config_dir = Path(os.environ["QC_CONFIG_DIR"])
-            fname = config_dir / "project.xml"
-            LOGGER.info("Parsing %s to find email to notify...", str(fname))
-            email = parse_project_xml(fname)
+            try:
+                config_dir = Path(os.environ["QC_CONFIG_DIR"])
+                fname = config_dir/ "project.xml"
+                LOGGER.info("Parsing %s to find email to notify...", str(fname))
+                email = dm.parse_project_xml(fname)
+            except AttributeError :
+                Logger.error("Project.xml is not updated")
+            else:
+                LOGGER.info(f"project.xml is not updated, sending email to {user}")
+                email = (f"{user}@qti.qualcomm.com")
             LOGGER.info("Using email: %s", email)
 
         return self.sitr_submit(pop, tag, self.sitr_mods, self.modules, comment, email=email)
@@ -252,11 +270,11 @@ class Wtf_dm(dm.Sitar_dm):
         return 0
 
 
-    def request_branch(self, version: str, comment: str) -> int:
+    def request_branch(self, version: str, comment: str, email=None) -> int:
         """Request a branch for the current project"""
         sitr_alias = f"baseline_{version}"
         # TODO - check for errors
-        self.create_branch(version, sitr_alias, comment)
+        self.create_branch(version, sitr_alias, comment, email=email)
         # TODO - add in a JIRA email
 
 
@@ -319,15 +337,16 @@ class Wtf_dm(dm.Sitar_dm):
         """Make a SITaR select/integrate/release based on the current workspace"""
         email = None
         if not noemail:
-            config_dir = Path(os.environ["QC_CONFIG_DIR"])
-            fname = config_dir / "project.xml"
-            LOGGER.info("Parsing %s to find email to notify...", str(fname))
             try:
-                email = parse_project_xml(fname)
-            except:
+                config_dir = Path(os.environ["QC_CONFIG_DIR"])
+                fname = config_dir/ "project.xml"
+                LOGGER.info("Parsing %s to find email to notify...", str(fname))
+                email = parse_xml.parse_project_xml(fname)
+            except AttributeError :
                 Logger.error("Project.xml is not updated")
             else:
-                email = f"{user}@qti.qualcomm.com"
+                print(f"project.xml is not updated, sending email to {user}")
+                email = (f"{user}@qti.qualcomm.com")
             LOGGER.info("Using email: %s", email)
 
         self.mod_list = self.flat_release_submit(
@@ -388,15 +407,16 @@ class Wtf_dm(dm.Sitar_dm):
                 self.sitr_integrate(mod_list)
         email = None
         if not noemail:
-            config_dir = Path(os.environ["QC_CONFIG_DIR"])
-            fname = config_dir / "project.xml"
-            LOGGER.info("Parsing %s to find email to notify...", str(fname))
             try:
-                email = parse_project_xml(fname)
-            except:
+                config_dir = Path(os.environ["QC_CONFIG_DIR"])
+                fname = config_dir/ "project.xml"
+                LOGGER.info("Parsing %s to find email to notify...", str(fname))
+                email = parse_xml.parse_project_xml(fname)
+            except AttributeError :
                 Logger.error("Project.xml is not updated")
             else:
-                email = f"{user}@qti.qualcomm.com"
+                print(f"project.xml is not updated, sending email to {user}")
+                email = (f"{user}@qti.qualcomm.com")
             LOGGER.info("Using email: %s", email)
 
         return self.sitr_release(comment, email=email)
@@ -405,15 +425,16 @@ class Wtf_dm(dm.Sitar_dm):
         """Perform a SITaR release only (must be run as Integrator)"""
         email = None
         if not noemail:
-            config_dir = Path(os.environ["QC_CONFIG_DIR"])
-            fname = config_dir / "project.xml"
-            LOGGER.info("Parsing %s to find email to notify...", str(fname))
             try:
-                email = parse_project_xml(fname)
-            except:
+                config_dir = Path(os.environ["QC_CONFIG_DIR"])
+                fname = config_dir/ "project.xml"
+                LOGGER.info("Parsing %s to find email to notify...", str(fname))
+                email = parse_xml.parse_project_xml(fname)
+            except AttributeError :
                 Logger.error("Project.xml is not updated")
             else:
-                email = f"{user}@qti.qualcomm.com"
+                print(f"project.xml is not updated, sending email to {user}")
+                email = (f"{user}@qti.qualcomm.com")
             LOGGER.info("Using email: %s", email)
         return self.sitr_release(comment, email=email)
 
@@ -424,31 +445,6 @@ class Wtf_dm(dm.Sitar_dm):
     def initial_setup(self):
         self.dump_dss_logfile_to_log()
         self.run_cdws()
-
-    # TODO - move to different module
-    def parse_project_xml(
-        self, fname: Path, section="wtf", key="email_notify"
-    ) -> str:
-        """
-        Parses given project.xml file and extracts the value of `key` attribute from
-        top-level element `section` -> `<values>`.
-        """
-        if not fname.exists():
-            LOGGER.error("%s NOT found", str(fname))
-            return ""
-
-        et = ET()
-        doc = et.parse(str(fname))
-
-        try:
-            section = doc.find(section)
-            values = section.find("values")
-            anon = values.find("anon")
-            value = anon.attrib[key]
-            return value
-        except Exception as err:
-            LOGGER.exception("Cannot parse %s: %s", str(fname), str(err))
-            return ""
 
 def main():
     """Main routine that is invoked when you run the script"""
@@ -484,8 +480,9 @@ def main():
     else:
         start_dir = Path.cwd()
     print(f"start dir = {start_dir}")
+    import Process
     wtf = Wtf_dm()
-    dm_shell = dm.Process()
+    dm_shell = Process.Process()
     wtf.configure_shell(dm_shell)
     with dm_shell.run_shell():
         print("Waiting for DM shell")
