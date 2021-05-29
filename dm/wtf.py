@@ -11,7 +11,6 @@ from datetime import datetime
 from functools import wraps
 from pathlib import Path
 from typing import Dict, Iterable, Optional
-#from parse_xml import parse_project_xml
 
 SCRIPT_NAME = Path(__file__).name
 LOG_DIR = Path(os.environ.get("SYNC_DEVAREA_DIR", Path.home())) / "logs"
@@ -27,7 +26,7 @@ try:
 except ImportError:
     try:
         pwd = os.path.dirname(os.path.abspath(__file__))
-        sys.path.insert(0, pwd + "/../log")
+        sys.path.insert(0, pwd + '/../log')
         import log
     except ImportError:
         pass
@@ -35,6 +34,16 @@ except ImportError:
 
 import dm
 # from dm import *  # isort:skip
+try:
+    from dm import *
+except ImportError:
+    try:
+        pwd = os.path.dirname(os.path.abspath(__file__))
+        sys.path.insert(0, pwd + '/../dm')
+        from dm import *
+    except ImportError:
+        pass
+#from dm import *  # isort:skip
 
 LOGGER = log.getLogger(__name__)
 
@@ -480,7 +489,6 @@ def mk_tapeout_ws(dssc, args: argparse.Namespace) -> int:
     """Make the tapeout workspace for the project"""
     return dssc.mk_tapeout_ws(args.tag)
 
-
 def setup_request_branch_args(parser):
     """handle the command line arguments for request_branch"""
     parser.add_argument(
@@ -495,6 +503,7 @@ def setup_request_branch_args(parser):
         "-c", "--comment", default=None, help="Provide a comment for the action"
     )
     parser.add_argument("--noemail", action="store_true", help="Do not send email")
+
 
 
 @command(setup=setup_request_branch_args)
@@ -749,7 +758,6 @@ def setup_args_parser():
     return args
 
 
-
 def run_dmshell_with_args(args, dssc) -> int:
     """Run the interactive shell to start stclc for dsync commands."""
     # run through bsub by default, but only for int_release and integrate, otherwise - locally
@@ -786,14 +794,12 @@ def run_dmshell_with_args(args, dssc) -> int:
         # TODO - add an option to create a JIRA ticket
         if args.interactive:
             import IPython
-
             IPython.embed()
         elif args.command and callable(args.func):
             LOGGER.debug("RUNNING: %s", args.command)
             exit_code = args.func(dssc, args)
             # TODO - need to send the exit command
     return exit_code
-
 
 def run_intshell_with_args(args, dssc) -> int:
     """Run the interactive shell to start stclc in the integrator mode."""
@@ -807,12 +813,14 @@ def run_intshell_with_args(args, dssc) -> int:
             dssc.mk_release_int(args.comment)
             # TODO - send email
         if args.request_branch:
-            dssc.request_branch(args.version, args.comment)
-
+            email = None
+            if not args.noemail:
+                email = "mgajjar"  # This will generate a JIRA ticket
+                LOGGER.info("Using email: %s", email)
+            dssc.request_branch(args.version, args.comment, email)
         if args.mk_branch:
             dssc.mk_branch_int(args.version, args.comment)
     return 0
-
 
 def run_cadshell_with_args(args, cad) -> int:
     """Run the interactive shell to start cadence for CIW commands."""
@@ -822,14 +830,12 @@ def run_cadshell_with_args(args, cad) -> int:
         # TODO - need to get the logfile
         if args.interactive:
             import IPython
-
             IPython.embed()
         elif args.command and callable(args.func):
             LOGGER.debug("RUNNING: %s", args.command)
             exit_code = args.func(cad, args)
             # TODO - need to send the exit command
     return exit_code
-
 
 def run_with_args(args) -> int:
     """Run the main script entrypoint with the given args, return the exit code."""
@@ -861,7 +867,7 @@ def run_with_args(args) -> int:
 
     if args.command in ("mk_tapeout_ws"):
         config = sitar.get_config()
-        ws = sitar.init_ws_builder(config, args.dev_name, args.ws_name)
+        ws = sitar.init_ws_builder( config, args.dev_name, args.ws_name)
         ws.create_shared_ws(args.ws_name)
 
     # Relaunch the DM shell as the integrator
