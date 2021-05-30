@@ -59,6 +59,9 @@ def command(*, setup: callable = None):
         def wrapped(dssc, args: argparse.Namespace):
             return func(dssc, args)
 
+        # Add command and setup attributes to command functions
+        # to help set up each command parser in setup_args_parser function
+        # using globals() dict
         wrapped.__cmd__ = True
         wrapped.__setup__ = setup
         return wrapped
