@@ -32,6 +32,7 @@ def send_email(
         "snapshot_submit": "EMAIL_Snapshot.html",
         "submit": "EMAIL_Submit.html",
         "request_branch": "JIRA_RequestBranch.html",
+        "JIRA_ticket": "JIRA_ticket.html",
     }
     user = getpass.getuser()
     if command_template == "request_branch":
