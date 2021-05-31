@@ -2,11 +2,11 @@
 
 import argparse
 import csv
+import logging
 import os
 import sys
-import logging
-from typing import List, Dict, Optional, Tuple, Sequence, Any
 from pathlib import Path
+from typing import Dict
 
 LOGGER = logging.getLogger(__name__)
 
@@ -104,8 +104,9 @@ def main() -> int:
     path_of_script = Path(__file__).absolute().parent
     sys.path.append(str(path_of_script))
 
-    import Process
     import Dsync
+
+    import Process
 
     if args.test:
         import doctest

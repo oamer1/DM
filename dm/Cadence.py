@@ -16,18 +16,18 @@
 """
 
 import argparse
-import os
 import logging
-from typing import List, Dict, Optional, Tuple, Sequence, Any
+import os
 from pathlib import Path
-from contextlib import contextmanager
+from typing import List, Tuple
 
 try:
     from dm import *
 except ImportError:
     try:
-        import Process
         import Dsync
+
+        import Process
     except ImportError:
         pass
 

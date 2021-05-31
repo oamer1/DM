@@ -10,23 +10,18 @@
             dssc.stclc_mod_exists("sync://ds-wanip-sec14-chips-2:3065/Projects/MAGNUS_TOP")
 """
 import argparse
-import datetime
-from logging import Logger
+import getpass
 import os
 import re
-import smtplib
-import sys
-from textwrap import dedent
-from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Tuple
-import getpass
 
 import log
 
 LOGGER = log.getLogger(__name__)
 
 import dm
+
 
 def get_sitr_proj_info(chip_name: str, chip_version: str) -> Tuple:
     """get the project name and container name for a SITaR project"""
@@ -68,6 +63,7 @@ def find_sitr_root_dir(dir: str = "") -> "Path":
     while path.parents and not Path(path / ".cshrc.project").exists():
         path = path.parent
     return path
+
 
 class Sitar_dm(dm.Dsync_dm):
     """Class for accessing Design Sync
@@ -291,7 +287,7 @@ class Sitar_dm(dm.Dsync_dm):
         ):
             return True
         if email is not None:
-            #prj, pr = url.split("%")
+            # prj, pr = url.split("%")
 
             user = getpass.getuser()
 
@@ -300,9 +296,9 @@ class Sitar_dm(dm.Dsync_dm):
 
             DEVELOPMENT_DIR = Path(os.environ["SYNC_DEVELOPMENT_DIR"])
             sitar_env = self.shell.run_command("sitr env")
-            data = [k for k in sitar_env.split('\n') if len(k)>3 and  k != "=" ]
-            data1 = [k for k in data if any(s in k for s in "=") ]
-            data2 = {k.split('=')[0].strip():k.split('=')[1].strip() for k in data1}
+            data = [k for k in sitar_env.split("\n") if len(k) > 3 and k != "="]
+            data1 = [k for k in data if any(s in k for s in "=")]
+            data2 = {k.split("=")[0].strip(): k.split("=")[1].strip() for k in data1}
             content = {
                 "DEVELOPMENT_DIR": DEVELOPMENT_DIR,
                 "prj": f"{url}",
@@ -345,7 +341,9 @@ class Sitar_dm(dm.Dsync_dm):
 
         mod_list = {}
         for branch in branches:
-            url = self.dssc_get_root_url(module=branch["module"], version=branch["version"])
+            url = self.dssc_get_root_url(
+                module=branch["module"], version=branch["version"]
+            )
             branched_url = self.dssc_get_root_url(
                 module=branch["module"], version=f"{version}_v1.1"
             )
@@ -357,7 +355,10 @@ class Sitar_dm(dm.Dsync_dm):
                     errors = True
             if not self.stclc_mod_exists(branched_url):
                 LOGGER.error(f"could not create the sitr module ({branched_url})")
-            mod_list[branch['module']] = {"module": branch['module'], "tagName": f"{version}_v1.1"}
+            mod_list[branch["module"]] = {
+                "module": branch["module"],
+                "tagName": f"{version}_v1.1",
+            }
         if errors:
             return {}
         return mod_list
@@ -393,7 +394,9 @@ class Sitar_dm(dm.Dsync_dm):
             print(f"Scanning {mod}")
             self.stclc_compare(args, args2)
 
-    def sitr_check_tag(self, sitr_mods: List[Dict], modules: List[str], tag: str) -> None:
+    def sitr_check_tag(
+        self, sitr_mods: List[Dict], modules: List[str], tag: str
+    ) -> None:
         """Check the specified tag and display the versions of the files that were tagged"""
         if not tag:
             tag = self.stclc_get_branch()
@@ -435,7 +438,9 @@ class Sitar_dm(dm.Dsync_dm):
             return True
         return False
 
-    def sitr_overlay_tag(self, sitr_mods: List[Dict], modules: List[str], tag: str) -> None:
+    def sitr_overlay_tag(
+        self, sitr_mods: List[Dict], modules: List[str], tag: str
+    ) -> None:
         """Display a list of the files checked out in the specified modules"""
         errors = []
         for mod in modules:
@@ -522,9 +527,9 @@ class Sitar_dm(dm.Dsync_dm):
                 self.io.display_mod_files(files)
                 errors.add(mod)
                 continue
-            #files = self.dssc_ls_modules(mod, modified=True)
-            #LOGGER.debug(f"results from show modified = {files}")
-            #if files:
+            # files = self.dssc_ls_modules(mod, modified=True)
+            # LOGGER.debug(f"results from show modified = {files}")
+            # if files:
             #    LOGGER.warn(
             #        f"The module {mod} has modified files and cannot be submitted"
             #    )
@@ -713,7 +718,9 @@ class Sitar_dm(dm.Dsync_dm):
         kv_resp = dm.parse_kv_response(f"{resp_str}")
         for url, settings in kv_resp.items():
             (base_url, selector) = url.split("@")
-            if any(selector.startswith(p) for p in allowed_prefixes) and re.search(r"v\d\.\d+$", selector):
+            if any(selector.startswith(p) for p in allowed_prefixes) and re.search(
+                r"v\d\.\d+$", selector
+            ):
                 root_mod = base_url.split("/")[-1]
                 new_item = settings
                 new_item["module"] = root_mod
@@ -818,6 +825,7 @@ class Sitar_dm(dm.Dsync_dm):
             attachment=attachment,
         )
 
+
 def main():
     """Main routine that is invoked when you run the script"""
     parser = argparse.ArgumentParser(
@@ -848,12 +856,12 @@ def main():
     if args.debug:
         log.set_debug()
     # Hack to work around Dsync symlinks
-    #path_of_script = Path(__file__).absolute().parent
-    #sys.path.append(str(path_of_script))
-    #from Spreadsheet_if import Spreadsheet_xls
+    # path_of_script = Path(__file__).absolute().parent
+    # sys.path.append(str(path_of_script))
+    # from Spreadsheet_if import Spreadsheet_xls
 
-    #ss = Spreadsheet_xls()
-    #if args.xls:
+    # ss = Spreadsheet_xls()
+    # if args.xls:
     #    ss.open_ss(args.xls)
     #    ss.set_active_sheet_no(0)
     #    ss.set_header_key("CORE NAME")

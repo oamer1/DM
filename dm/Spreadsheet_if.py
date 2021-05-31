@@ -12,10 +12,9 @@ import os
 import sys
 from abc import ABCMeta, abstractmethod
 
+import log
 import openpyxl
 import xlrd
-
-import log
 
 __all__ = ["Spreadsheet_if", "Spreadsheet_csv", "Spreadsheet_xls", "Spreadsheet_xlsx"]
 

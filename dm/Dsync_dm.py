@@ -10,15 +10,10 @@
             dssc.stclc_mod_exists("sync://ds-wanip-sec14-chips-2:3065/Projects/MAGNUS_TOP")
 """
 import argparse
-import datetime
-from logging import Logger
 import os
 import re
-import smtplib
-import sys
-from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 import log
 

@@ -8,7 +8,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Dict
 
 # Customization
 # site = subprocess.check_output(["gvquery","-p" "site"]).rstrip()

@@ -4,13 +4,9 @@ Supports running SITaR commands via a DM shell.
 """
 import argparse
 import os
-import subprocess
 import sys
-import getpass
-from datetime import datetime
 from functools import wraps
 from pathlib import Path
-from typing import Dict, Iterable, Optional
 
 SCRIPT_NAME = Path(__file__).name
 LOG_DIR = Path(os.environ.get("SYNC_DEVAREA_DIR", Path.home())) / "logs"

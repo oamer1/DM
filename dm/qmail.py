@@ -1,13 +1,11 @@
-from email.mime.multipart import MIMEMultipart
-from email.mime.application import MIMEApplication
-from pathlib import Path
 import getpass
 import smtplib
+from email.mime.application import MIMEApplication
+from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from pathlib import Path
+from typing import Dict, List
 
-# from pathlib import Path
-# from sys import os
-from typing import List, Dict
 import jinja2
 
 

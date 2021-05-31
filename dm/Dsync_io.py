@@ -12,19 +12,13 @@
 import argparse
 import datetime
 import os
-import re
-import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Tuple
-
-
-import tabulate
-
-import pandas as pd
+from typing import Dict, List
 
 import log
-import dm
+import pandas as pd
+import tabulate
 
 LOGGER = log.getLogger(__name__)
 

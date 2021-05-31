@@ -4,15 +4,10 @@
         import dm
 """
 import argparse
-import datetime
-import os
 import re
-import sys
-from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 import log
-import dm
 
 LOGGER = log.getLogger(__name__)
 
