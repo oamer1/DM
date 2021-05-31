@@ -660,7 +660,7 @@ def release(dssc, args: argparse.Namespace) -> int:
 
 
 @command()
-def jira(dssc, args: argparse.Namespace):
+def jira(dssc, args: argparse.Namespace) -> int:
     """
     Send jira email with subject and comment and an attachment log_file
     """
