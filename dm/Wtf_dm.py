@@ -379,6 +379,19 @@ class Wtf_dm(dm.Sitar_dm):
         self.dump_dss_logfile_to_log()
         self.run_cdws()
 
+    def jira(self, subject: str, comment: str, log_file: Path) -> int:
+        """
+        Send jira email with subject and comment and attachment log_file
+        """
+        content = dict(comment=comment)
+        return self.email_command_output(
+            email=self.email,
+            subject=subject,
+            content=content,
+            command_template="JIRA_ticket",
+            attachment=log_file,
+        )
+
 
 def main():
     """Main routine that is invoked when you run the script"""
