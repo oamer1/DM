@@ -8,7 +8,6 @@ import os
 from pathlib import Path
 from typing import List
 
-user = getpass.getuser()
 
 try:
     import log
@@ -46,6 +45,10 @@ class Wtf_dm(dm.Sitar_dm):
         self.module_given = False
         self.dev_dir = None
         self.version = None
+
+        self.email = dm.get_email(
+            Path(os.environ["QC_CONFIG_DIR"]), user=getpass.getuser()
+        )
 
     def wtf_get_sitr_modules(self, given_mods: List, only_update: bool = False):
         """
@@ -212,21 +215,9 @@ class Wtf_dm(dm.Sitar_dm):
         self, tag: str = "", pop: bool = False, comment: str = "", noemail: bool = False
     ) -> int:
         """Perform a SITaR submit / snapshot submit"""
-        user = getpass.getuser()
         email = None
         if not noemail:
-            # TODO - this should use the Batman settings env var
-            try:
-                config_dir = Path(os.environ["QC_CONFIG_DIR"])
-                fname = config_dir / "project.xml"
-                LOGGER.info("Parsing %s to find email to notify...", str(fname))
-                email = dm.parse_project_xml(fname)
-            except AttributeError:
-                LOGGER.error("Project.xml is not updated")
-            else:
-                LOGGER.info(f"project.xml is not updated, sending email to {user}")
-                email = f"{user}@qti.qualcomm.com"
-            LOGGER.info("Using email: %s", email)
+            email = self.email
 
         return self.sitr_submit(
             pop, tag, self.sitr_mods, self.modules, comment, email=email
@@ -313,17 +304,7 @@ class Wtf_dm(dm.Sitar_dm):
         """Make a SITaR select/integrate/release based on the current workspace"""
         email = None
         if not noemail:
-            try:
-                config_dir = Path(os.environ["QC_CONFIG_DIR"])
-                fname = config_dir / "project.xml"
-                LOGGER.info("Parsing %s to find email to notify...", str(fname))
-                email = dm.parse_project_xml(fname)
-            except AttributeError:
-                LOGGER.error("Project.xml is not updated")
-            else:
-                print(f"project.xml is not updated, sending email to {user}")
-                email = f"{user}@qti.qualcomm.com"
-            LOGGER.info("Using email: %s", email)
+            email = self.email
 
         self.mod_list = self.flat_release_submit(
             self.sitr_mods, tag, comment, email=email
@@ -379,17 +360,7 @@ class Wtf_dm(dm.Sitar_dm):
                 self.sitr_integrate(mod_list)
         email = None
         if not noemail:
-            try:
-                config_dir = Path(os.environ["QC_CONFIG_DIR"])
-                fname = config_dir / "project.xml"
-                LOGGER.info("Parsing %s to find email to notify...", str(fname))
-                email = dm.parse_project_xml(fname)
-            except AttributeError:
-                LOGGER.error("Project.xml is not updated")
-            else:
-                print(f"project.xml is not updated, sending email to {user}")
-                email = f"{user}@qti.qualcomm.com"
-            LOGGER.info("Using email: %s", email)
+            email = self.email
 
         return self.sitr_release(comment, email=email)
 
@@ -397,17 +368,8 @@ class Wtf_dm(dm.Sitar_dm):
         """Perform a SITaR release only (must be run as Integrator)"""
         email = None
         if not noemail:
-            try:
-                config_dir = Path(os.environ["QC_CONFIG_DIR"])
-                fname = config_dir / "project.xml"
-                LOGGER.info("Parsing %s to find email to notify...", str(fname))
-                email = dm.parse_project_xml(fname)
-            except AttributeError:
-                LOGGER.error("Project.xml is not updated")
-            else:
-                print(f"project.xml is not updated, sending email to {user}")
-                email = f"{user}@qti.qualcomm.com"
-            LOGGER.info("Using email: %s", email)
+            email = self.email
+
         return self.sitr_release(comment, email=email)
 
     def wtf_set_dev_dir(self):
