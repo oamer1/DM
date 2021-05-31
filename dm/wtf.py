@@ -5,8 +5,10 @@ Supports running SITaR commands via a DM shell.
 import argparse
 import os
 import sys
+import tkinter as tk
 from functools import wraps
 from pathlib import Path
+from tkinter import filedialog
 
 SCRIPT_NAME = Path(__file__).name
 LOG_DIR = Path(os.environ.get("SYNC_DEVAREA_DIR", Path.home())) / "logs"
@@ -657,6 +659,36 @@ def release(dssc, args: argparse.Namespace) -> int:
     return dssc.release(args.comment, args.noemail)
 
 
+@command()
+def jira(dssc, args: argparse.Namespace):
+    subject = ""
+    comment = ""
+
+    # TODO input validation ?
+    while True:
+        subject = input("Please enter subject: ")
+
+        if subject:
+            break
+
+    while True:
+        comment = input("Please enter Comment: ")
+
+        if comment:
+            break
+
+    # Open Tkinter filedialog
+    root = tk.Tk()
+    root.withdraw()
+    # TODO initialdir ?
+    log_file = filedialog.askopenfilenames(
+        title="Select log file",
+        filetypes=[("log file", "*.log")],
+    )
+
+    return dssc.jira(subject=subject, comment=comment, log_file=Path(log_file))
+
+
 def setup_args_parser():
     """Configures the argument parser."""
     parser = argparse.ArgumentParser(
@@ -751,6 +783,7 @@ def setup_args_parser():
         compare=args.command == "compare",
         is_integrate=args.command == "integrate",
         status=args.command == "status",
+        jira=args.command == "jira",
     )
     if not hasattr(args, "module"):
         # FIXME: nasty hack - needed until refactored all commands
