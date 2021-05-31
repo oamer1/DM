@@ -817,7 +817,7 @@ class Sitar_dm(dm.Dsync_dm):
     ):
         email_user = getpass.getuser()
         dm.send_email(
-            self,
+            subject=subject,
             sender=email_user,
             recipients=[email],
             content=content,
