@@ -34,3 +34,27 @@ def parse_project_xml(fname: Path, section="wtf", key="email_notify") -> str:
     except Exception as err:
         LOGGER.exception("Cannot parse %s: %s", str(fname), str(err))
         return ""
+
+
+def get_email(config_dir_path: Path, user: str) -> str:
+    """
+    Get email_notify from config_dir / "project.xml" if exists
+    else use f"{user}@qti.qualcomm.com"
+    """
+    try:
+        fname = config_dir_path / "project.xml"
+        LOGGER.info(f"Parsing {str(fname)} to find email to notify...")
+        email = parse_project_xml(fname)
+
+    except AttributeError:
+        LOGGER.error("Project.xml is not updated")
+
+    except Exception as e:
+        LOGGER.error(f"Error: {e}", exc_info=True)
+
+    else:
+        LOGGER.info(f"project.xml is not updated, sending email to {user}")
+        email = f"{user}@qti.qualcomm.com"
+    LOGGER.info(f"Using email: {email}")
+
+    return email
