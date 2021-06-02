@@ -46,9 +46,10 @@ class Wtf_dm(dm.Sitar_dm):
         self.dev_dir = None
         self.version = None
 
-        self.email = dm.get_email(
-            Path(os.environ["QC_CONFIG_DIR"]), user=getpass.getuser()
-        )
+    @property
+    def email(self):
+        email = dm.get_email(Path(os.environ["QC_CONFIG_DIR"]), user=getpass.getuser())
+        return email
 
     def wtf_get_sitr_modules(self, given_mods: List, only_update: bool = False):
         """
