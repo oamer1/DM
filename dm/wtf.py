@@ -930,6 +930,12 @@ def main() -> int:
     Does not return, terminates with the returned the exit code.
     """
     args = setup_args_parser()
+
+    # Log used command to filer log files in jira command
+    LOGGER.info(f"######### [command]={args.command} #########")
+
+    # Log used arguments
+    log.cli_arguments()
     exit_code = run_with_args(args)
     sys.exit(exit_code)
 
