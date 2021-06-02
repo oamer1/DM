@@ -5,10 +5,8 @@ Supports running SITaR commands via a DM shell.
 import argparse
 import os
 import sys
-import tkinter as tk
 from functools import wraps
 from pathlib import Path
-from tkinter import filedialog
 
 SCRIPT_NAME = Path(__file__).name
 LOG_DIR = Path(os.environ.get("SYNC_DEVAREA_DIR", Path.home())) / "logs"
@@ -680,18 +678,27 @@ def jira(dssc, args: argparse.Namespace) -> int:
         if comment:
             break
 
-    # Open Tkinter filedialog
-    root = tk.Tk()
-    root.withdraw()
-    # TODO initialdir ?
-    log_file = filedialog.askopenfilenames(
-        title="Select log file",
-        filetypes=[("log file", "*.log")],
-    )
+    # Choose log file from list
+    # return list of pairs (command, log_file_Path)
+    log_files_classfied = log.classify_logs_command(LOG_DIR)
+    for index, pair in enumerate(log_files_classfied, 1):
+        option = f"{index} : {pair[0]} : '{pair[1]}' "
+        print(option)
+
+    # User choose log file
+    option_index = None
+    while option_index not in range(1, len(log_files_classfied) + 1):
+        try:
+            option_index = int(input("Enter option number: "))
+        except ValueError:
+            print("Please enter an integer.")
+
+    log_file = log_files_classfied[option_index - 1][1]
 
     return dssc.jira(subject=subject, comment=comment, log_file=Path(log_file))
 
 
+#  "Number : user_command: log_file_name"
 def setup_args_parser():
     """Configures the argument parser."""
     parser = argparse.ArgumentParser(
