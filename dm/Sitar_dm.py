@@ -825,6 +825,8 @@ class Sitar_dm(dm.Dsync_dm):
             attachment=attachment,
         )
 
+        return 0
+
 
 def main():
     """Main routine that is invoked when you run the script"""
