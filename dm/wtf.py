@@ -892,6 +892,11 @@ def run_with_args(args) -> int:
     bsub_mode = not getattr(args, "local", False) and is_release_or_integrate
     dssc, dm_shell = setup_dmsh(start_dir, args.test, bsub_mode=bsub_mode)
 
+    # No need to run any shell, just send JIRA email.
+    if args.command in ("jira"):
+        exit_code = args.func(dssc, args)
+        return exit_code
+
     if not args.command in ("mk_lib", "request_branch"):
         exit_code = run_dmshell_with_args(args, dssc)
         if exit_code:
