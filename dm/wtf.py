@@ -939,7 +939,7 @@ def main() -> int:
     args = setup_args_parser()
 
     # Log used command to filer log files in jira command
-    LOGGER.info(f"######### [command]={args.command} #########")
+    LOGGER.debug(f"######### [command]={args.command} #########")
 
     # Log used arguments
     log.cli_arguments()
