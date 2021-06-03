@@ -129,7 +129,7 @@ def classify_logs_command(log_dir: Path) -> List[Tuple[str, Path]]:
             log_text = f.read()
             result = re.search(command_patt, log_text)
             if result:
-                command = result.group()
+                command = result.group(0)
                 matched_files.append((command, log_file))
 
     # Sort based on command
