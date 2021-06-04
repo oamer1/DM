@@ -122,14 +122,15 @@ def classify_logs_command(log_dir: Path) -> List[Tuple[str, Path]]:
     log_files = []
     log_files.extend(log_dir.glob("*.log"))
     log_files.extend(log_dir.glob("*.log.*[1-9]"))
-    command_patt = r"(?<=\[command\]=)\w+"
+    # catch command along with arguments
+    command_patt = r"\[command\]=(.*)#"
     # Loop through log file , open and read command
     for log_file in log_files:
         with open(log_file, "r") as f:
             log_text = f.read()
             result = re.search(command_patt, log_text)
             if result:
-                command = result.group(0)
+                command = result.group(1)
                 matched_files.append((command, log_file))
 
     # Sort based on command
