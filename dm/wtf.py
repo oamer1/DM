@@ -670,6 +670,8 @@ def choose_log_file() -> str:
         LOGGER.info("Could not find log files.")
         sys.exit(1)
 
+    # Print option to quit
+    print("0 : Quit jira command")
     for index, pair in enumerate(log_files_classfied, 1):
         command, log_file_path = pair
         option = f"{index} : {command} : '{log_file_path}' "
@@ -678,7 +680,11 @@ def choose_log_file() -> str:
     option_index = None
     while option_index not in range(1, len(log_files_classfied) + 1):
         try:
-            option_index = int(input("Enter option number: "))
+            option_index = int(input("Enter option number or 0 to quit."))
+            # Quit command
+            if option_index == 0:
+                LOGGER.info("Quit jira command")
+                sys.exit(0)
         except ValueError:
             print("Please enter an integer in options.")
 
@@ -715,6 +721,7 @@ def jira(dssc, args: argparse.Namespace) -> int:
     comment = ask_string_input("Please enter Comment: ")
 
     # Ask user for email to send jira
+
     for index, email in enumerate(JIRA_EMAILS, 1):
         option = f"{index} : {email}"
         print(option)
