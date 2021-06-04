@@ -657,6 +657,49 @@ def release(dssc, args: argparse.Namespace) -> int:
     return dssc.release(args.comment, args.noemail)
 
 
+def choose_log_file() -> str:
+    """
+    Utility funtion for jira command to display log files option
+    and let user choose a log file
+    """
+    # Choose log file from list
+    # return list of pairs (command, log_file_Path)
+    log_files_classfied = log.classify_logs_command(LOG_DIR)
+
+    if not log_files_classfied:
+        LOGGER.info("Could not find log files.")
+        sys.exit(1)
+
+    for index, pair in enumerate(log_files_classfied, 1):
+        command, log_file_path = pair
+        option = f"{index} : {command} : '{log_file_path}' "
+        print(option)
+    # User choose log file
+    option_index = None
+    while option_index not in range(1, len(log_files_classfied) + 1):
+        try:
+            option_index = int(input("Enter option number: "))
+        except ValueError:
+            print("Please enter an integer in options.")
+
+    log_file = log_files_classfied[option_index - 1][1]
+
+    return log_file
+
+
+def ask_string_input(prompt: str) -> str:
+    """
+    Utility funtion for jira to get string input
+    """
+    # TODO input validation ?
+    while True:
+        string = input(prompt)
+        if string:
+            break
+    return string
+
+
+# args argument is kept so not to break decorator signature
 @command()
 def jira(dssc, args: argparse.Namespace) -> int:
     """
@@ -664,38 +707,33 @@ def jira(dssc, args: argparse.Namespace) -> int:
     """
     subject = ""
     comment = ""
+    JIRA_EMAILS = ["email1@jira_example.com", "email2@jira_example.com"]
 
-    # TODO input validation ?
-    while True:
-        subject = input("Please enter subject: ")
+    log_file = choose_log_file()
 
-        if subject:
-            break
+    subject = ask_string_input("Please enter subject: ")
+    comment = ask_string_input("Please enter Comment: ")
 
-    while True:
-        comment = input("Please enter Comment: ")
-
-        if comment:
-            break
-
-    # Choose log file from list
-    # return list of pairs (command, log_file_Path)
-    log_files_classfied = log.classify_logs_command(LOG_DIR)
-    for index, pair in enumerate(log_files_classfied, 1):
-        option = f"{index} : {pair[0]} : '{pair[1]}' "
+    # Ask user for email to send jira
+    for index, email in enumerate(JIRA_EMAILS, 1):
+        option = f"{index} : {email}"
         print(option)
 
-    # User choose log file
     option_index = None
-    while option_index not in range(1, len(log_files_classfied) + 1):
+    while option_index not in range(1, len(JIRA_EMAILS) + 1):
         try:
             option_index = int(input("Enter option number: "))
         except ValueError:
-            print("Please enter an integer.")
+            print("Please enter an integer in options.")
 
-    log_file = log_files_classfied[option_index - 1][1]
+    email = JIRA_EMAILS[option_index - 1]
 
-    return dssc.jira(subject=subject, comment=comment, log_file=Path(log_file))
+    LOGGER.debug(
+        f"JIRA Email sent with subject={subject}, comment={comment}, email={email}, logfile={log_file}"
+    )
+    return dssc.jira(
+        subject=subject, comment=comment, log_file=Path(log_file), email=email
+    )
 
 
 #  "Number : user_command: log_file_name"
@@ -937,12 +975,11 @@ def main() -> int:
     Does not return, terminates with the returned the exit code.
     """
     args = setup_args_parser()
+    used_arguments = " ".join(sys.argv[1:])
 
-    # Log used command to filer log files in jira command
-    LOGGER.debug(f"######### [command]={args.command} #########")
+    # Log used command + arguments to filer log files based on it
+    LOGGER.debug(f"######### [command]={used_arguments} #########")
 
-    # Log used arguments
-    log.cli_arguments()
     exit_code = run_with_args(args)
     sys.exit(exit_code)
 
