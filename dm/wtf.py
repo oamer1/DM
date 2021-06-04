@@ -659,7 +659,7 @@ def release(dssc, args: argparse.Namespace) -> int:
 
 def choose_log_file() -> str:
     """
-    Utility funtion for jira command to display log files option
+    Utility function for jira command to display log files options
     and let user choose a log file
     """
     # Choose log file from list
@@ -689,7 +689,7 @@ def choose_log_file() -> str:
 
 def ask_string_input(prompt: str) -> str:
     """
-    Utility funtion for jira to get string input
+    Utility function for jira to get string input
     """
     # TODO input validation ?
     while True:
