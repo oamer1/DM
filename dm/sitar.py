@@ -114,7 +114,7 @@ class WS_Builder(object):
         user = getpass.getuser()
         if shared_name:
             self.work_dir = self.project_dir / shared_name
-            self.user_dir = self.work_dir / name / user
+            self.user_dir = self.work_dir / name
             self.ws_name = f"{self.development_name}_{shared_name}"
         else:
             self.work_dir = self.project_dir / name
@@ -478,6 +478,12 @@ class TableParser:
             secs = (end_datetime - start_datetime).total_seconds()
             log_debug("Command took %.4f seconds" % secs)
             yield from cls._from_lines(result.stdout.decode("utf-8").splitlines())
+            # result_lines = result.stdout.decode("utf-8").splitlines()
+            #
+            # end_datetime = datetime.utcnow()
+            # secs = (end_datetime - start_datetime).total_seconds()
+            # log_debug("Command took %.4f seconds" % secs)
+            # yield from cls._from_lines(result_lines)
 
     @classmethod
     def _from_lines(cls, lines: Iterable[str]) -> Iterable[Row]:
@@ -531,7 +537,7 @@ class TableParser:
         """
         Attempts to normalize the `lines` as much as possible to make parsing as
         close to parsing tab-delimited values as possible: strips leading/
-        trailing whitespace, splits by DELIMITER, removes empty strings, and
+        trailing whiictespace, splits by DELIMITER, removes empty strings, and
         rejoins the result with tab ("\t").
         """
         for line in lines:
@@ -543,7 +549,6 @@ class TableParser:
         Display a table with the labels in DISPLAY_COLUMNS
         (values), for each row with the matching keys in there.
         """
-
         table = OrderedDict((header, []) for header in cls.DISPLAY_COLUMNS.values())
 
         for row in lines:
@@ -562,7 +567,9 @@ class AreaParser(TableParser):
 
     COMMAND = ["sda", "ls", "-area", "-report", "verbose"]
     KEYS_HEADERS = dict(
+        #name="Development Area", # added name as first in the order, but in sda ls its second
         development="Development",
+        #if the sequence is matching with the output of COMMAND, it stores the right value into .cfg file
         name="Development Area",
         assignment="Assignment",
         shared="Shared",
@@ -586,6 +593,7 @@ class DevelopmentParser(TableParser):
         name="Development",
         assignments="Assignments",
         data_url="Data URL",
+        #name="Development",
         selector="Selector",
         path="Development Path",
         server_url="Server URL",
@@ -619,10 +627,16 @@ def save_lines(
     kind = parser_cls.__name__.replace("Parser", "").lower()
     names_section = f"{kind}s"
 
+    print("------", parser_cls.__name__)
+
     for row in lines:
         name = row["name"].lower()
         if name in names:
             continue
+        # for key_row, key_header in zip(row, parser_cls.KEYS_HEADERS.keys()):
+        #     print("##################", key_row, key_header, "##################")
+        #     if key_row != key_header:
+        #         raise KeyError(f"The headers do not match: {key_row}, {key_header}")
 
         names.add(name)
         section = f"{kind}:{name}"
@@ -662,9 +676,28 @@ def update_cache(config: ConfigParser, cfg: Path, force=False):
             lines = parser_cls.run()
             save_lines(config, lines, parser_cls)
 
+        #flag_delete_config = False
         with cfg.open("wt", encoding="utf-8") as c:
-            config.write(c)
-            log_info("Local cache %r updated" % str(cfg))
+            #print(config["main"]["areas"].split(","))
+            areas = config["main"]["areas"].split(",")
+            development = config["main"]["developments"].split(",")
+            if len(areas) == 1 and areas[0] == "":
+                log_info("No ws areas saved, ls_ws,set_ws,join_ws will not work")
+                config.write(c)
+                log_info("Local cache %r updated" % str(cfg))
+                #flag_delete_config = True
+            elif len(development) == 1 and development[0] == "":
+                log_info("No developements saved, ls_prj, make_ws, join_ws with shared will not work")
+                config.write(c)
+                log_info("Local cache %r updated" % str(cfg))
+                #flag_delete_config = True
+            else:
+                config.write(c)
+                log_info("Local cache %r updated" % str(cfg))
+
+        # if flag_delete_config:
+        #     cfg.unlink()
+        #     raise Exception("No areas. Not saving the config.")
 
     else:
         config.read([cfg])
@@ -1023,36 +1056,36 @@ def set_ws(args: argparse.Namespace, config: ConfigParser) -> int:
     """prepare and start an interactive shell for a workspace."""
     ws_name = args.ws_name
     ws_section = f"area:{ws_name.lower()}"
-    if not ws_name or not config.has_section(ws_section):
-        user_name = getpass.getuser()
-        ws_section = f"area:{ws_name.lower()}_{user_name}"
-        if not config.has_section(ws_section):
-            ws_section = f"area:{ws_name.lower()}_v100_{user_name}"
-            if not config.has_section(ws_section):
+    # if not ws_name or not config.has_section(ws_section):
+    #     user_name = getpass.getuser()
+    #     ws_section = f"area:{ws_name.lower()}_{user_name}"
+    #     # if not config.has_section(ws_section):
+    #     #     ws_section = f"area:{ws_name.lower()}_v100_{user_name}"
+    if not config.has_section(ws_section):
 
-                all_areas_names = [area["name"] for area in all_areas(config)]
+        all_areas_names = [area["name"] for area in all_areas(config)]
 
-                # filter is provided
-                if ws_name:
-                    filtered_areas = filter_workspaces(all_areas(config), ws_name)
-                else:
-                    log_info("Did not provided any workspace name: %s!" % ws_name)
-                    filtered_areas = all_areas_names
+        # filter is provided
+        if ws_name:
+            filtered_areas = filter_workspaces(all_areas(config), ws_name)
+        else:
+            log_info("Did not provided any workspace name: %s!" % ws_name)
+            filtered_areas = all_areas_names
 
-                # No filtered entries
-                # Set filtered_areas to all area names so they are displayes as options
-                if not filtered_areas:
-                    log_info(f"Filter {ws_name} is invalid, displaying all areas.")
-                    filtered_areas = all_areas_names
+        # No filtered entries
+        # Set filtered_areas to all area names so they are displayes as options
+        if not filtered_areas:
+            log_info(f"Filter {ws_name} is invalid, displaying all areas.")
+            filtered_areas = all_areas_names
 
-                print("Please choose one of these workspaces:")
-                areas = []
-                for i, area in enumerate(filtered_areas, 1):
-                    print(i, area)
-                    areas.append(area)
+        print("Please choose one of these workspaces:")
+        areas = []
+        for i, area in enumerate(filtered_areas, 1):
+            print(i, area)
+            areas.append(area)
 
-                choice = input("(1-{})".format(i))
-                ws_section = f"area:{areas[int(choice)-1].lower()}"
+        choice = input("(1-{})".format(i))
+        ws_section = f"area:{areas[int(choice)-1].lower()}"
 
     ws = config[ws_section]
     ws_name = ws["name"]
@@ -1060,6 +1093,11 @@ def set_ws(args: argparse.Namespace, config: ConfigParser) -> int:
     log_info("Workspace name is %s" % ws_name)
     log_info("Workspace path is %s" % ws_path)
     return setup_shell(ws_path, ws_name, args.xterm)
+
+
+
+
+    
 
 
 def setup_shell_args(parser: argparse.ArgumentParser):
