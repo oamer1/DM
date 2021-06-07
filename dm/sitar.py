@@ -735,7 +735,17 @@ def ls_ws(args: argparse.Namespace, config: ConfigParser) -> int:
     return 0
 
 
-@command(help="list projects")
+def setup_ls_prj_args(parser: argparse.ArgumentParser):
+    parser.add_argument(
+        "-a",
+        "--all",
+        help="Show all projects",
+        dest="all",
+        action="store_true",
+    )
+
+
+@command(help="list projects", setup=setup_ls_prj_args)
 def ls_prj(args: argparse.Namespace, config: ConfigParser) -> int:
     """list existing projects"""
 
@@ -745,7 +755,15 @@ def ls_prj(args: argparse.Namespace, config: ConfigParser) -> int:
             dev = config[section]
             yield dev
 
-    DevelopmentParser.tabulate(all_devs())
+    all_devs_iter = all_devs()
+    # User does not have access to all projects, exclude projects
+    # with path <NotAvailable> if arg all not passed
+    if not args.all:
+        all_devs_iter = filter(
+            lambda dev: dev["path"] != "<NotAvailable>", all_devs_iter
+        )
+
+    DevelopmentParser.tabulate(all_devs_iter)
     return 0
 
 
