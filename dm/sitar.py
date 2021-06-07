@@ -567,9 +567,9 @@ class AreaParser(TableParser):
 
     COMMAND = ["sda", "ls", "-area", "-report", "verbose"]
     KEYS_HEADERS = dict(
-        #name="Development Area", # added name as first in the order, but in sda ls its second
+        # name="Development Area", # added name as first in the order, but in sda ls its second
         development="Development",
-        #if the sequence is matching with the output of COMMAND, it stores the right value into .cfg file
+        # if the sequence is matching with the output of COMMAND, it stores the right value into .cfg file
         name="Development Area",
         assignment="Assignment",
         shared="Shared",
@@ -593,7 +593,7 @@ class DevelopmentParser(TableParser):
         name="Development",
         assignments="Assignments",
         data_url="Data URL",
-        #name="Development",
+        # name="Development",
         selector="Selector",
         path="Development Path",
         server_url="Server URL",
@@ -676,21 +676,23 @@ def update_cache(config: ConfigParser, cfg: Path, force=False):
             lines = parser_cls.run()
             save_lines(config, lines, parser_cls)
 
-        #flag_delete_config = False
+        # flag_delete_config = False
         with cfg.open("wt", encoding="utf-8") as c:
-            #print(config["main"]["areas"].split(","))
+            # print(config["main"]["areas"].split(","))
             areas = config["main"]["areas"].split(",")
             development = config["main"]["developments"].split(",")
             if len(areas) == 1 and areas[0] == "":
                 log_info("No ws areas saved, ls_ws,set_ws,join_ws will not work")
                 config.write(c)
                 log_info("Local cache %r updated" % str(cfg))
-                #flag_delete_config = True
+                # flag_delete_config = True
             elif len(development) == 1 and development[0] == "":
-                log_info("No developements saved, ls_prj, make_ws, join_ws with shared will not work")
+                log_info(
+                    "No developements saved, ls_prj, make_ws, join_ws with shared will not work"
+                )
                 config.write(c)
                 log_info("Local cache %r updated" % str(cfg))
-                #flag_delete_config = True
+                # flag_delete_config = True
             else:
                 config.write(c)
                 log_info("Local cache %r updated" % str(cfg))
@@ -1093,11 +1095,6 @@ def set_ws(args: argparse.Namespace, config: ConfigParser) -> int:
     log_info("Workspace name is %s" % ws_name)
     log_info("Workspace path is %s" % ws_path)
     return setup_shell(ws_path, ws_name, args.xterm)
-
-
-
-
-    
 
 
 def setup_shell_args(parser: argparse.ArgumentParser):

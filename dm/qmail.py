@@ -1,4 +1,3 @@
-
 import getpass
 import smtplib
 from email.mime.application import MIMEApplication
@@ -7,6 +6,7 @@ from email.mime.text import MIMEText
 from pathlib import Path
 from typing import Dict, List
 import jinja2
+
 
 def send_email(
     subject: str,
@@ -43,12 +43,11 @@ def send_email(
         raise ValueError(f"Unknown Command : {command_template} not in {commands}")
     Email_file = Email_templates[command_template]
     # Load EMAIL_Submit.html template
-  
-    
+
     RFA_DIR = Path(os.environ["RFA_MODELERS_DIR"])
-    path_dir = str(RFA_DIR / "python3" /"dm" / "Email_template" )
-    
-    env = jinja2.Environment(loader=jinja2.FileSystemLoader(searchpath = path_dir))
+    path_dir = str(RFA_DIR / "python3" / "dm" / "Email_template")
+
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader(searchpath=path_dir))
     mail_template = env.get_template(Email_file)
 
     # Place contents in content template placeholder
