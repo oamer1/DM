@@ -315,7 +315,12 @@ class WS_Builder(object):
     @classmethod
     def setup_base_args(cls, parser: argparse.ArgumentParser):
         parser.add_argument(
-            "dev_name", help="Specify the name of the development", type=str
+            "dev_name",
+            help="Specify the name of the development",
+            type=str,
+            metavar="dev_name",
+            default="",
+            nargs="?",
         )
         parser.add_argument(
             "-n",
