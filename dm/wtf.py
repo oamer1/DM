@@ -7,7 +7,6 @@ import os
 import sys
 from functools import wraps
 from pathlib import Path
-from .utils import classify_logs_command, ask_string_input, ask_option_number
 
 SCRIPT_NAME = Path(__file__).name
 LOG_DIR = Path(os.environ.get("SYNC_DEVAREA_DIR", Path.home())) / "logs"
@@ -665,7 +664,7 @@ def choose_log_file() -> str:
     """
     # Choose log file from list
     # return list of pairs (command, log_file_Path)
-    log_files_classfied = classify_logs_command(LOG_DIR)
+    log_files_classfied = dm.classify_logs_command(LOG_DIR)
 
     if not log_files_classfied:
         LOGGER.info("Could not find log files.")
@@ -676,7 +675,7 @@ def choose_log_file() -> str:
         option = f"{index} : {command} : '{log_file_path}' "
         print(option)
     # User choose log file
-    option_index = ask_option_number(len(log_files_classfied))
+    option_index = dm.ask_option_number(len(log_files_classfied))
 
     log_file = log_files_classfied[option_index][1]
 
@@ -696,8 +695,8 @@ def jira(dssc, args: argparse.Namespace) -> int:
     print("Type quit or q to exit command at any stage.")
     log_file = choose_log_file()
 
-    subject = ask_string_input("Please enter subject: ")
-    comment = ask_string_input("Please enter comment: ")
+    subject = dm.ask_string_input("Please enter subject: ")
+    comment = dm.ask_string_input("Please enter comment: ")
 
     # Ask user for email to send jira
 
@@ -705,7 +704,7 @@ def jira(dssc, args: argparse.Namespace) -> int:
         option = f"{index} : {email}"
         print(option)
 
-    option_index = ask_option_number(len(JIRA_EMAILS))
+    option_index = dm.ask_option_number(len(JIRA_EMAILS))
     email = JIRA_EMAILS[option_index]
 
     LOGGER.debug(

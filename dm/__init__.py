@@ -16,3 +16,4 @@ from dm.sitar import *
 from dm.wtf import *
 from dm.parse_xml import *
 from dm.qmail import *
+from dm.wtf_utils import *
