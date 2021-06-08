@@ -14,8 +14,7 @@ from configparser import ConfigParser
 from datetime import datetime
 from functools import wraps
 from pathlib import Path
-from typing import Dict, List, Iterable, Optional
-from .utils import ask_option_number, ask_string_input, choose_option
+from typing import Dict, List, Iterable, Optional, Sequence
 import tabulate
 
 SCRIPT_NAME = Path(__file__).name
@@ -52,6 +51,58 @@ def log_error(msg: str, exc_info: bool = False):
     logger.error(msg, exc_info=exc_info)
     print(f"ERROR: {msg}")
     sys.exit(1)
+
+
+def ask_string_input(prompt: str) -> str:
+    """
+    Ask user to string input
+    """
+
+    # TODO input validation ?
+    while True:
+        string = input(prompt)
+
+        if string.lower().strip() in ("quit", "q"):
+            sys.exit(0)
+
+        if string:
+            break
+
+    return string
+
+
+def ask_option_number(
+    options_number: int, prompt: str = "Enter option number: "
+) -> int:
+    """
+    Given options_number , ask user for input integer
+    between 1 and options_number inclusive
+    """
+    option_index = None
+    while option_index not in range(1, options_number + 1):
+        try:
+            _option = input(prompt)
+            option_index = int(_option)
+        except ValueError:
+            if _option in ["quit", "q"]:
+                print("Exit command.")
+                sys.exit(0)
+            else:
+                print("Please enter valid integer")
+    return option_index - 1
+
+
+def choose_option(options: Sequence[str]) -> str:
+    """
+    Given an iterable, display options and ask user for one
+    """
+
+    for i, option in enumerate(options, 1):
+        print(f"{i} : {option}")
+
+    choice = ask_option_number(len(options))
+
+    return options[choice]
 
 
 # TODO - should this be a class?
