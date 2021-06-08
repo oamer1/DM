@@ -2,7 +2,7 @@
 This module provides utility functions for consumption
 """
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Sequence
 import re
 import sys
 
@@ -64,7 +64,21 @@ def ask_option_number(
             option_index = int(_option)
         except ValueError:
             if _option in ["quit", "q"]:
+                print("Exit command.")
                 sys.exit(0)
             else:
                 print("Please enter valid integer")
     return option_index - 1
+
+
+def choose_option(options: Sequence[str]) -> str:
+    """
+    Given an iterable, display options and ask user for one
+    """
+
+    for i, option in enumerate(options, 1):
+        print(f"{i} : {option}")
+
+    choice = ask_option_number(len(options))
+
+    return options[choice]

@@ -15,7 +15,7 @@ from datetime import datetime
 from functools import wraps
 from pathlib import Path
 from typing import Dict, List, Iterable, Optional
-from .utils import ask_option_number
+from .utils import ask_option_number, ask_string_input, choose_option
 import tabulate
 
 SCRIPT_NAME = Path(__file__).name
@@ -917,7 +917,24 @@ def make_ws(args: argparse.Namespace, config: ConfigParser) -> int:
     """
     Create a SITaR workspace for the current project.
     """
+    # Show available project names and let user choose
+    dev_projects = config["main"]["developments"].split(",")
+    if not args.dev_name:
+        dev_name = choose_option(dev_projects)
+        args.dev_name = dev_name
+
+    if not args.ws_name:
+        args.ws_name = ask_string_input("Please enter workspace name: ")
+
+    workspace_modes = ("shared", "tapeout", "regression", "release", "integrator")
+
     shared_flag = args.shared or args.tapeout or args.regression or args.release
+    if not (shared_flag or args.integrator):
+        for i, mode in enumerate(workspace_modes, 1):
+            print(f"{i} : {mode}")
+        choice = ask_option_number(len(workspace_modes))
+        mode = workspace_modes[choice]
+
     ws = init_ws_builder(config, args.dev_name, args.integrator, shared=shared_flag)
     ws.test_mode = args.test_mode
     ws.validate_make_join_args(args)
