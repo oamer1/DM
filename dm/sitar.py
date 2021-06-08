@@ -919,6 +919,7 @@ def make_ws(args: argparse.Namespace, config: ConfigParser) -> int:
     """
     # Show available project names and let user choose
     dev_projects = config["main"]["developments"].split(",")
+    # if dev_name not provided ask
     if not args.dev_name:
         dev_name = choose_option(dev_projects)
         args.dev_name = dev_name
@@ -926,14 +927,14 @@ def make_ws(args: argparse.Namespace, config: ConfigParser) -> int:
     if not args.ws_name:
         args.ws_name = ask_string_input("Please enter workspace name: ")
 
+    # These modes are mutually exclusive
     workspace_modes = ("shared", "tapeout", "regression", "release", "integrator")
-
     shared_flag = args.shared or args.tapeout or args.regression or args.release
+
+    # if no mode is provided
     if not (shared_flag or args.integrator):
-        for i, mode in enumerate(workspace_modes, 1):
-            print(f"{i} : {mode}")
-        choice = ask_option_number(len(workspace_modes))
-        mode = workspace_modes[choice]
+        mode = choose_option(workspace_modes)
+        setattr(args, mode, True)
 
     ws = init_ws_builder(config, args.dev_name, args.integrator, shared=shared_flag)
     ws.test_mode = args.test_mode
