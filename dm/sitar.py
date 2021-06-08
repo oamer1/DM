@@ -1099,13 +1099,11 @@ def set_ws(args: argparse.Namespace, config: ConfigParser) -> int:
             filtered_areas = all_areas_names
 
         print("Please choose one of these workspaces:")
-        areas = []
         for i, area in enumerate(filtered_areas, 1):
             print(i, area)
-            areas.append(area)
 
         choice = ask_option_number(len(filtered_areas), f"(1-{i})")
-        ws_section = f"area:{areas[choice].lower()}"
+        ws_section = f"area:{filtered_areas[choice].lower()}"
 
     ws = config[ws_section]
     ws_name = ws["name"]
