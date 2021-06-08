@@ -7,6 +7,7 @@ import os
 import sys
 from functools import wraps
 from pathlib import Path
+from .utils import classify_logs_command
 
 SCRIPT_NAME = Path(__file__).name
 LOG_DIR = Path(os.environ.get("SYNC_DEVAREA_DIR", Path.home())) / "logs"
@@ -701,7 +702,7 @@ def choose_log_file() -> str:
     """
     # Choose log file from list
     # return list of pairs (command, log_file_Path)
-    log_files_classfied = log.classify_logs_command(LOG_DIR)
+    log_files_classfied = classify_logs_command(LOG_DIR)
 
     if not log_files_classfied:
         LOGGER.info("Could not find log files.")
