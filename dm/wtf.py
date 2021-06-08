@@ -399,7 +399,7 @@ def setup_compare_args(parser):
 @command(setup=setup_compare_args)
 def compare(dssc, args: argparse.Namespace) -> int:
     """Run a compare on the specified MODULES vs Trunk/Version/Tag"""
-    return dssc.compare(args.mods, args.module, args.tag, args.trunk, args.baseline)
+    return dssc.compare()
 
 
 @command()
@@ -428,10 +428,10 @@ def mk_lib(cad, args: argparse.Namespace) -> int:
     if not libs_to_add:
         LOGGER.warn("No libraries to add")
         return 1
-    if Dsync.prompt_to_continue():
+    if dm.prompt_to_continue():
         if cad.checkout_files(files_to_checkout):
             cad.make_cadence_libs(libs_to_add)
-            if Dsync.prompt_to_continue("Check in files"):
+            if dm.prompt_to_continue("Check in files"):
                 cad.checkin_libs(libs_to_add)
     return 0
 
@@ -928,7 +928,7 @@ def run_with_args(args) -> int:
 
     if args.command in ("mk_lib"):
         start_dir = os.environ["PROJ_USER_WORK"]
-        cad = Cadence.Cadence(cwd=start_dir, test_mode=args.test)
+        cad = dm.Cadence(cwd=start_dir, test_mode=args.test)
         ciw_shell = dm.Process()
         cad.configure_shell(ciw_shell)
         exit_code = run_cadshell_with_args(args, cad)
