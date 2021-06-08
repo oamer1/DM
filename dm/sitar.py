@@ -96,7 +96,7 @@ def choose_option(options: Sequence[str]) -> str:
     """
     Given an iterable, display options and ask user for one
     """
-
+    print("Type quit or q to exit command at any stage.")
     for i, option in enumerate(options, 1):
         print(f"{i} : {option}")
 
@@ -981,13 +981,22 @@ def make_ws(args: argparse.Namespace, config: ConfigParser) -> int:
     """
 
     dev_projects = all_devs(config, filter_unavailable=True)
-    projects_names = [section["name"] for section in dev_projects]
+    # print("dev_prk", list(dev_projects))
+    # print("dev_prk", projects_names)
+
     # if arg.dev_name provided use it as filter
+    #print(args.dev_name)
+    # print("before pas", list(dev_projects))
     if args.dev_name:
         projects_names = filter_workspaces(dev_projects, args.dev_name)
+        #print(projects_names)
+    else:
+        projects_names = [section["name"] for section in dev_projects]
+
     # Display filterd dev_names and ask for one
     dev_name = choose_option(projects_names)
     args.dev_name = dev_name
+
 
     # These modes are mutually exclusive, if ws_name is chosen
     # ask for ws_name , if skip was chosen skip all
