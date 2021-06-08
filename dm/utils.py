@@ -4,11 +4,12 @@ This module provides utility functions for consumption
 from pathlib import Path
 from typing import List, Tuple
 import re
+import sys
 
 
 def classify_logs_command(log_dir: Path) -> List[Tuple[str, Path]]:
     """
-    Classify log files based on used command
+    Enumerate available log files (logfile_name, logfile_Path)
     """
     # find .log files and rotated log files ending with int e.g ex.log.1
     matched_files = []
@@ -29,3 +30,39 @@ def classify_logs_command(log_dir: Path) -> List[Tuple[str, Path]]:
     # Sort based on command
     matched_files = sorted(matched_files, key=lambda pair: pair[0])
     return matched_files
+
+
+def ask_string_input(prompt: str) -> str:
+    """
+    Ask user to string input
+    """
+
+    # TODO input validation ?
+    while True:
+        string = input(prompt)
+
+        if string.lower().strip() in ("quit", "q"):
+            sys.exit(0)
+
+        if string:
+            break
+
+    return string
+
+
+def ask_option_number(options_number: int) -> int:
+    """
+    Given options_number , ask user for input integer
+    between 1 and options_number inclusive
+    """
+    option_index = None
+    while option_index not in range(1, options_number + 1):
+        try:
+            _option = input("Enter option number: ")
+            option_index = int(_option)
+        except ValueError:
+            if _option in ["quit", "q"]:
+                sys.exit(0)
+            else:
+                print("Please enter valid integer")
+    return option_index - 1

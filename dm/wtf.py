@@ -7,7 +7,7 @@ import os
 import sys
 from functools import wraps
 from pathlib import Path
-from .utils import classify_logs_command
+from .utils import classify_logs_command, ask_string_input, ask_option_number
 
 SCRIPT_NAME = Path(__file__).name
 LOG_DIR = Path(os.environ.get("SYNC_DEVAREA_DIR", Path.home())) / "logs"
@@ -656,43 +656,6 @@ def setup_release_args(parser):
 def release(dssc, args: argparse.Namespace) -> int:
     """Perform a SITaR release only (must be run as Integrator)"""
     return dssc.release(args.comment, args.noemail)
-
-
-def ask_string_input(prompt: str) -> str:
-    """
-    Utility function for jira to get string input
-    """
-
-    # TODO input validation ?
-    while True:
-        string = input(prompt)
-
-        if string.lower().strip() in ("quit", "q"):
-            LOGGER.info("Exiting command.")
-            sys.exit(0)
-
-        if string:
-            break
-
-    return string
-
-
-def ask_option_number(options_number: int) -> int:
-    """
-    Utility function for jira to get option number
-    """
-    option_index = None
-    while option_index not in range(1, options_number + 1):
-        try:
-            _option = input("Enter option number: ")
-            option_index = int(_option)
-        except ValueError:
-            if _option in ["quit", "q"]:
-                LOGGER.info("Exiting command")
-                sys.exit(0)
-            else:
-                print("Please enter valid integer")
-    return option_index - 1
 
 
 def choose_log_file() -> str:
