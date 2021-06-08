@@ -979,24 +979,40 @@ def make_ws(args: argparse.Namespace, config: ConfigParser) -> int:
     """
     Create a SITaR workspace for the current project.
     """
-    # Show available project names and let user choose
-    dev_projects = config["main"]["developments"].split(",")
-    # if dev_name not provided ask
-    if not args.dev_name:
-        dev_name = choose_option(dev_projects)
-        args.dev_name = dev_name
 
-    if not args.ws_name:
-        args.ws_name = ask_string_input("Please enter workspace name: ")
+    dev_projects = all_devs(config, filter_unavailable=True)
+    projects_names = [section["name"] for section in dev_projects]
+    # if arg.dev_name provided use it as filter
+    if args.dev_name:
+        projects_names = filter_workspaces(dev_projects, args.dev_name)
+    # Display filterd dev_names and ask for one
+    dev_name = choose_option(projects_names)
+    args.dev_name = dev_name
 
-    # These modes are mutually exclusive
-    workspace_modes = ("shared", "tapeout", "regression", "release", "integrator")
+    # These modes are mutually exclusive, if ws_name is chosen
+    # ask for ws_name , if skip was chosen skip all
+    workspace_modes = (
+        "skip",
+        "ws_name",
+        "shared",
+        "tapeout",
+        "regression",
+        "release",
+        "integrator",
+    )
     shared_flag = args.shared or args.tapeout or args.regression or args.release
 
     # if no mode is provided
     if not (shared_flag or args.integrator):
         mode = choose_option(workspace_modes)
-        setattr(args, mode, True)
+
+        if mode == "skip":
+            # do nothing
+            pass
+        elif mode == "ws_name":
+            args.ws_name = ask_string_input("Please enter workspace name: ")
+        else:
+            setattr(args, mode, True)
 
     ws = init_ws_builder(config, args.dev_name, args.integrator, shared=shared_flag)
     ws.test_mode = args.test_mode
@@ -1134,7 +1150,7 @@ def setup_shell(ws_path: str, dev_name: str = None, xterm: bool = False, cmd="")
 
 def filter_workspaces(ws_names_areas: Iterable[Row], ws_filter: str) -> List[str]:
     """
-    Utility function used for set_ws function
+    Utility function
     Filter Iterable[Row] Workspaces names that starts with word ws_filter
     case insensitive and ingore spaces at word ends .
     """
