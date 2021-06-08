@@ -15,7 +15,7 @@ from datetime import datetime
 from functools import wraps
 from pathlib import Path
 from typing import Dict, List, Iterable, Optional
-
+from .utils import ask_option_number
 import tabulate
 
 SCRIPT_NAME = Path(__file__).name
@@ -1104,8 +1104,8 @@ def set_ws(args: argparse.Namespace, config: ConfigParser) -> int:
             print(i, area)
             areas.append(area)
 
-        choice = input("(1-{})".format(i))
-        ws_section = f"area:{areas[int(choice)-1].lower()}"
+        choice = ask_option_number(len(filtered_areas), f"(1-{i})")
+        ws_section = f"area:{areas[choice].lower()}"
 
     ws = config[ws_section]
     ws_name = ws["name"]
