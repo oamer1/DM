@@ -50,7 +50,9 @@ def ask_string_input(prompt: str) -> str:
     return string
 
 
-def ask_option_number(options_number: int) -> int:
+def ask_option_number(
+    options_number: int, prompt: str = "Enter option number: "
+) -> int:
     """
     Given options_number , ask user for input integer
     between 1 and options_number inclusive
@@ -58,7 +60,7 @@ def ask_option_number(options_number: int) -> int:
     option_index = None
     while option_index not in range(1, options_number + 1):
         try:
-            _option = input("Enter option number: ")
+            _option = input(prompt)
             option_index = int(_option)
         except ValueError:
             if _option in ["quit", "q"]:
