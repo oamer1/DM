@@ -750,23 +750,29 @@ def setup_ls_prj_args(parser: argparse.ArgumentParser):
     )
 
 
+def all_devs(config: ConfigParser, filter_unavailable: bool = False) -> Iterable[Row]:
+    """
+    Return development sections from config
+    """
+    sections = (
+        f"development:{name}" for name in config["main"]["developments"].split(",")
+    )
+    devs = (config[section] for section in sections)
+    # User does not have access to all projects, exclude projects
+    # with path <NotAvailable> if arg all not passed
+    if filter_unavailable:
+        devs = filter(lambda dev: dev["path"] != "<NotAvailable>", devs)
+
+    return devs
+
+
 @command(help="list projects", setup=setup_ls_prj_args)
 def ls_prj(args: argparse.Namespace, config: ConfigParser) -> int:
     """list existing projects"""
 
-    def all_devs() -> Iterable[Row]:
-        for name in config["main"]["developments"].split(","):
-            section = f"development:{name}"
-            dev = config[section]
-            yield dev
-
-    all_devs_iter = all_devs()
-    # User does not have access to all projects, exclude projects
-    # with path <NotAvailable> if arg all not passed
-    if not args.all:
-        all_devs_iter = filter(
-            lambda dev: dev["path"] != "<NotAvailable>", all_devs_iter
-        )
+    # Remove unavailable projects if args.all not true
+    filter_unavailable = False if args.all else True
+    all_devs_iter = all_devs(config, filter_unavailable=filter_unavailable)
 
     DevelopmentParser.tabulate(all_devs_iter)
     return 0
