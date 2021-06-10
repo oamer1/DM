@@ -983,7 +983,7 @@ def make_ws(args: argparse.Namespace, config: ConfigParser) -> int:
     dev_projects = list(all_devs(config, filter_unavailable=True))
     projects_names = [section["name"] for section in dev_projects]
 
-    # if partial dev_name provided filter spaces
+    # if partial dev_name provided, filter spaces
     if args.dev_name:
         projects_names = filter_workspaces(dev_projects, args.dev_name)
 
