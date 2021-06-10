@@ -991,31 +991,7 @@ def make_ws(args: argparse.Namespace, config: ConfigParser) -> int:
     dev_name = choose_option(projects_names)
     args.dev_name = dev_name
 
-    # These modes are mutually exclusive, if ws_name is chosen
-    # ask for ws_name , if skip was chosen skip all
-    workspace_modes = (
-        "skip",
-        "ws_name",
-        "shared",
-        "tapeout",
-        "regression",
-        "release",
-        "integrator",
-    )
     shared_flag = args.shared or args.tapeout or args.regression or args.release
-
-    # if no mode is provided
-    if not (shared_flag or args.integrator):
-        mode = choose_option(workspace_modes)
-
-        if mode == "skip":
-            # do nothing
-            pass
-        elif mode == "ws_name":
-            args.ws_name = ask_string_input("Please enter workspace name: ")
-        else:
-            setattr(args, mode, True)
-
     ws = init_ws_builder(config, args.dev_name, args.integrator, shared=shared_flag)
     ws.test_mode = args.test_mode
     ws.validate_make_join_args(args)
