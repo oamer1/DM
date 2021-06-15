@@ -988,12 +988,18 @@ def make_ws(args: argparse.Namespace, config: ConfigParser) -> int:
     if args.dev_name:
         projects_names_filtered = filter_workspaces(dev_projects, args.dev_name)
 
+    project_names_options = projects_names_filtered
+
     # If partial dev_name provided does not match any name
-    # Display all options
-    project_names_options = (
-        projects_names_filtered if projects_names_filtered else projects_names
-    )
-    # Display filterd dev_names and ask for one
+    if not projects_names_filtered:
+        log_info(
+            "You did not enter any input Or your input did not match any available projects.\n"
+            "Listing all Available Projects"
+        )
+        # Display all options
+        project_names_options = projects_names
+
+    # Display filterd dev_names or all and ask for one
     dev_name = choose_option(project_names_options)
     args.dev_name = dev_name
 
