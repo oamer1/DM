@@ -984,11 +984,17 @@ def make_ws(args: argparse.Namespace, config: ConfigParser) -> int:
     projects_names = [section["name"] for section in dev_projects]
 
     # if partial dev_name provided, filter spaces
+    projects_names_filtered = []
     if args.dev_name:
-        projects_names = filter_workspaces(dev_projects, args.dev_name)
+        projects_names_filtered = filter_workspaces(dev_projects, args.dev_name)
 
+    # If partial dev_name provided does not match any name
+    # Display all options
+    project_names_options = (
+        projects_names_filtered if projects_names_filtered else projects_names
+    )
     # Display filterd dev_names and ask for one
-    dev_name = choose_option(projects_names)
+    dev_name = choose_option(project_names_options)
     args.dev_name = dev_name
 
     shared_flag = args.shared or args.tapeout or args.regression or args.release
