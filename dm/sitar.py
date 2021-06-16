@@ -1015,6 +1015,8 @@ def make_ws(args: argparse.Namespace, config: ConfigParser) -> int:
 
     if run_post:
         post_ws_builder(config, args, ws, "is ready")
+        # Setup workspace to ensure files are latest versions
+        setup_shell(ws_path=ws.work_dir, cmd="python -m dm setup_ws")
     return 0
 
 
