@@ -1171,11 +1171,13 @@ def set_ws(args: argparse.Namespace, config: ConfigParser) -> int:
     #     #     ws_section = f"area:{ws_name.lower()}_v100_{user_name}"
     if not config.has_section(ws_section):
         all_areas_names = [area["name"] for area in all_areas(config)]
+        exact_match = ws_name in all_areas_names
+
+        options = all_areas_names
 
         if not ws_name:
             log_info("Did not provided any workspace name: %s!" % ws_name)
-            options = all_areas_names
-        else:
+        elif not exact_match:
             options = filter_workspaces(all_areas(config), ws_name)
 
         # No filtered entries
@@ -1183,9 +1185,10 @@ def set_ws(args: argparse.Namespace, config: ConfigParser) -> int:
             log_info(f"Filter {ws_name} is invalid, displaying all areas.")
 
         print("Please choose one of these workspaces:")
-        choice = choose_option(options)
+        if not exact_match:
+            ws_name = choose_option(options)
 
-        ws_section = f"area:{choice.lower()}"
+        ws_section = f"area:{ws_name.lower()}"
 
     ws = config[ws_section]
     ws_name = ws["name"]
