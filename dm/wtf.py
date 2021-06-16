@@ -436,6 +436,105 @@ def mk_lib(cad, args: argparse.Namespace) -> int:
     return 0
 
 
+def setup_netlist_args(parser):
+    """handle the command line arguments for netlist"""
+    parser.add_argument(
+        "config",
+        help="Specify the config from the project.xml file (or in the form lib:cell:view)",
+        metavar="CONFIG",
+        type=str,
+    )
+    parser.add_argument("-s", "--show", action="store_true", help="Show the configs available in the project.xml file")
+    parser.add_argument("-v", "--voos", action="store_true", help="Run voos on the config")
+    parser.add_argument("-t", "--textInputs", action="store_true", help="Generate the textInputs file from the config")
+    parser.add_argument("-n", "--netlist", action="store_true", help="Generate the netlist for the config")
+    parser.add_argument(
+        "-o",
+        "--output",
+        help="Specify the output file to use",
+        metavar="FILENAME",
+        type=str,
+        default="",
+    )
+
+
+@command(setup=setup_netlist_args)
+def netlist(cad, args: argparse.Namespace) -> int:
+    """Run a netlist from the config"""
+    netlists = dm.get_netlist_info()
+    if args.show:
+        LOGGER.info(f"The following configs are defined in the project.xml file: {' '.join(netlists)}")
+
+    if args.config in netlists:
+        lib = netlists[args.config]['config_lib']
+        cell = netlists[args.config]['config_cell']
+        view = netlists[args.config]['config_name']
+        if not args.voos and not args.textInputs:
+            args.netlist = True
+    else:
+        try:
+            (lib, cell, view) = args.config.split(':')
+            if args.netlist:
+                LOGGER.error(f"Netlisting can only be done on a config defined in the project.xml file")
+                return 1
+        except Exception as err:
+            LOGGER.error(f"The config {args.config} was not defined in the project.xml file")
+            return 1
+
+    path = Path(os.environ["PROJ_USER_WORK"])
+    if args.voos:
+        fname = path / cad.run_voos_on_config(lib, cell, view)
+        if fname.exists():
+            LOGGER.info(f"The output VOOS logfile has been created: {fname}")
+        else:
+            LOGGER.error("The output VOOS logfile was not created")
+
+    if args.textInputs:
+        fname = path / cad.gen_textInputs_from_config(lib, cell, view)
+        if fname.exists():
+            LOGGER.info(f"The output textInputs file has been created: {fname}")
+        else:
+            LOGGER.error("The output textInputs was not created")
+
+    if args.netlist:
+        cad.call_create_netlists(config)
+        LOGGER.info(f"Netlist creation complete")
+
+    return 0
+
+
+@command()
+def lib_debug(cad, args: argparse.Namespace) -> int:
+    """Debug the Cadence libraries"""
+    # TODO - need option for filter
+    libs = cad.run_cds_lib_debug()
+    print(f"found {len(libs)} items")
+    for lib in libs:
+        print(f"{lib}")
+    # Display libs
+    return 0
+
+
+@command()
+def setup_ws(dssc, args: argparse.Namespace) -> int:
+    """Setup a workspace after it has been created"""
+    # TODO - send email
+    return dssc.setup_ws()
+
+
+def setup_diag_args(parser):
+    """handle the command line arguments for diag"""
+    parser.add_argument("-P", "--no_pop", help="Do not populate modules", action="store_true")
+    parser.add_argument("-S", "--no_scan", help="Do not scan modules", action="store_true")
+    parser.add_argument("-n", "--no_interactive", help="Do not prompt for actions", action="store_true")
+
+
+@command(setup=setup_diag_args)
+def diag(dssc, args: argparse.Namespace) -> int:
+    """Run diagnostics on the specified module"""
+    return dssc.diag(interactive=not args.no_interactive, do_pop=not args.no_pop, do_scan=not args.no_scan)
+
+
 @command()
 def setup_ws(dssc, args: argparse.Namespace) -> int:
     """Setup a workspace after it has been created"""
@@ -715,6 +814,18 @@ def jira(dssc, args: argparse.Namespace) -> int:
     )
 
 
+# command
+def gui():
+    """
+    Trigger GUI
+    """
+    return dm.trigger_GUI()
+
+
+# set a command attribute so setup_args_parser add this command
+gui.__cmd__ = True
+
+
 #  "Number : user_command: log_file_name"
 def setup_args_parser():
     """Configures the argument parser."""
@@ -771,6 +882,8 @@ def setup_args_parser():
                 "mk_branch",
                 "mk_tapeout_ws",
                 "mk_lib",
+                "netlist",
+                "lib_debug",
                 "updatehrefs",
             ):
                 subparser.add_argument(
@@ -811,6 +924,7 @@ def setup_args_parser():
         is_integrate=args.command == "integrate",
         status=args.command == "status",
         jira=args.command == "jira",
+        gui=args.command == "gui",
     )
     if not hasattr(args, "module"):
         # FIXME: nasty hack - needed until refactored all commands
@@ -851,7 +965,10 @@ def run_dmshell_with_args(args, dssc) -> int:
             args.snapshot,
         )
 
-        # TODO - add an option to create a JIRA ticket
+        if args.command != "diag":
+            if dssc.diag(interactive=False):
+                return 1
+
         if args.interactive:
             import IPython
 
@@ -890,6 +1007,8 @@ def run_cadshell_with_args(args, cad) -> int:
     exit_code = 0
     with cad.shell.run_shell():
         wait_for_shell_with_timeout(cad.shell, "Cadence")
+        LOGGER.info("Cadence shell is up")
+
         # TODO - need to get the logfile
         if args.interactive:
             import IPython
@@ -917,16 +1036,20 @@ def run_with_args(args) -> int:
     dssc, dm_shell = setup_dmsh(start_dir, args.test, bsub_mode=bsub_mode)
 
     # No need to run any shell, just send JIRA email.
+    if args.command in ("gui"):
+        exit_code = args.func()
+        return exit_code
+
     if args.command in ("jira"):
         exit_code = args.func(dssc, args)
         return exit_code
 
-    if not args.command in ("mk_lib", "request_branch"):
+    if not args.command in ("lib_debug", "netlist", "mk_lib", "request_branch"):
         exit_code = run_dmshell_with_args(args, dssc)
         if exit_code:
             return exit_code
 
-    if args.command in ("mk_lib"):
+    if args.command and args.command in ("lib_debug", "netlist", "mk_lib"):
         start_dir = os.environ["PROJ_USER_WORK"]
         cad = dm.Cadence(cwd=start_dir, test_mode=args.test)
         ciw_shell = dm.Process()
@@ -948,7 +1071,7 @@ def run_with_args(args) -> int:
     return 0
 
 
-def main() -> int:
+def wtf_main() -> int:
     """
     Wrapper around main script entrypoint with the arguments passed at run-time,
     Does not return, terminates with the returned the exit code.
@@ -964,4 +1087,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    main()
+    wtf_main()
