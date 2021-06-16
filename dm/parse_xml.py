@@ -1,5 +1,7 @@
+import os
 from pathlib import Path
 from lxml.etree import ElementTree as ET
+from typing import Dict
 
 try:
     import log
@@ -32,9 +34,23 @@ def parse_project_xml(fname: Path, section="wtf", key="email_notify") -> str:
         value = anon.attrib[key]
         return value
     except Exception as err:
-        LOGGER.exception("Cannot parse %s: %s", str(fname), str(err))
+        LOGGER.debug("Cannot parse %s: %s", str(fname), str(err))
         return ""
 
+
+def get_netlist_info() -> Dict:
+    fname = Path(os.environ["BATMAN_XML_SETTINGS_FILE"])
+    et = ET()
+    doc = et.parse(str(fname))
+    try:
+        section = doc.find('Netlists')
+        values = section.find("values")
+        netlists = {}
+        for netlist in values.getchildren():
+            netlists[netlist.attrib['name']] = { key : netlist.attrib[key] for key in netlist.keys() }
+        return netlists
+    except Exception as err:
+        return {}
 
 def get_email(config_dir_path: Path, user: str) -> str:
     """
