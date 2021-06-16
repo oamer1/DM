@@ -10,10 +10,15 @@
             dssc.stclc_mod_exists("sync://ds-wanip-sec14-chips-2:3065/Projects/MAGNUS_TOP")
 """
 import argparse
+import datetime
+from logging import Logger
 import os
 import re
+import smtplib
+import sys
+from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 import log
 
@@ -22,7 +27,8 @@ LOGGER = log.getLogger(__name__)
 import dm
 
 
-class Dsync_dm:
+
+class Dsync_dm():
     """Class for accessing Design Sync
     This class should be used with the Process class (which starts up the stclc
     shell). The methods will send commands to the process and check the
@@ -57,7 +63,7 @@ class Dsync_dm:
     # Basic methods to manipulate data
     ###############################################
 
-    def configure_shell(self, shell: "Process", io=None) -> None:
+    def configure_shell(self, shell: "Process", io = None) -> None:
         """configure the shell for running the stclc shell"""
         shell.prompt = "stcl>"
         if self.bsub_mode:
@@ -94,7 +100,7 @@ class Dsync_dm:
     def run_cdws(self):
         """Runs cdws commands returns the response."""
         # TODO - check for errors
-        return self.shell.run_command("cdws")
+        return self.shell.run_command("cd $env(DSGN_PROJ)")
 
     def stclc_get_hrefs(self, url: str) -> str:
         """call stclc to get the hrefs for a particular url, return the response"""
@@ -107,11 +113,13 @@ class Dsync_dm:
             self.test_mode,
         )
 
-    def stclc_check_out(self, fname: str) -> bool:
+    def stclc_rmfile(self, fname: str) -> None:
+        """remove the files specified by string"""
+        self.shell.stream_command_disp(f'rmfile {fname}', self.test_mode)
+
+    def stclc_check_out(self, fname: str, locked: bool = True) -> bool:
         """check out files specified by string"""
-        self.shell.stream_command_disp(
-            f"set resp [populate -lock {fname}]", self.test_mode
-        )
+        self.shell.stream_command_disp(f'set resp [populate {"-lock" if locked else ""} {fname}]', self.test_mode)
         return self.check_resp_error(f"check out of {fname}")
 
     def stclc_check_in(
@@ -121,8 +129,8 @@ class Dsync_dm:
         if not comment:
             comment = input("Please provide a comment: ")
         self.shell.stream_command_disp(
-            f'ci -new {"-rec" if rec else ""} -comment "{comment}" {files}',
-            self.test_mode,
+            f'ci -new {"-rec" if rec else ""} -comment "{comment}" {args} {files}',
+            self.test_mode
         )
         # TODO - how to check if this command passes.
         # return self.check_resp_error(f"check in of {files}")
@@ -133,48 +141,38 @@ class Dsync_dm:
     ) -> bool:
         """run the populate command, print output, and return any errors"""
         pop_args = f'{"-rec" if rec else ""} {"-force" if force else ""}'
-        self.shell.stream_command_disp(
-            f"set resp [populate {pop_args} {url} {args}]", self.test_mode
-        )
+        self.shell.stream_command_disp(f"set resp [populate {pop_args} {url} {args}]", self.test_mode)
         return self.check_resp_error(f"populate {url}")
 
-    def stclc_ls_modules(
-        self,
-        module: str,
-        modified: bool = False,
-        locked: bool = False,
-        unmanaged: bool = False,
-        filt: str = "",
-    ) -> str:
+    def stclc_ls_modules(self, module: str, modified: bool = False, locked: bool = False, unmanaged: bool = False, filt: str = "") -> str:
         """scan for files that are checked out in the specified module"""
         ls_args = f'{"-modified" if modified else ""} {"-locked" if locked else ""} {"-unmanaged" if unmanaged else ""}'
-        return self.shell.run_command(
-            f"ls -rec -path -format list {ls_args} {filt} {module}"
+        resp = self.shell.run_command(
+            f"set resp [ls -rec -path -format list {ls_args} {filt} {module}]", self.test_mode
         )
+        return self.stclc_puts_resp()
 
     def stclc_get_file_status(self, path: str) -> Dict:
         """return the design sync status of a single file"""
         resp = self.shell.run_command(
             f"set resp [ls -report status -format list {path}]", self.test_mode
         )
-        # files = parse_kv_response(self.stclc_puts_resp())
-        # if not files:
+        #files = parse_kv_response(self.stclc_puts_resp())
+        #if not files:
         #    return {}
-        # return files[0]
+        #return files[0]
         return self.stclc_puts_resp()
 
     def stclc_module_contents(self, module: str, tag: str = "", path="") -> str:
         """show the contents of the sitr module associated with the specified tag"""
         args = f'{"-selector" if tag else ""} {tag} {"-path" if path else ""} {path}'
         return self.shell.run_command(
-            f"contents -modulecontext {module} -format list {args}"
+            f"contents -modulecontext {module} -version -format list {args}"
         )
 
     def stclc_tag_files(self, tag: str, path: str, args: str = "") -> str:
         """Tag the associated file/path with the specified tag"""
-        self.shell.stream_command_disp(
-            f"set resp [tag {args} {tag} {path}]", self.test_mode
-        )
+        self.shell.stream_command_disp(f"set resp [tag {args} {tag} {path}]", self.test_mode)
         return self.check_resp_error(f"tag files {path}")
 
     def stclc_module_locks(self, module: str) -> str:
@@ -204,8 +202,8 @@ class Dsync_dm:
 
     def stclc_current_module(self) -> str:
         """return the module for the current working directory"""
-        # resp = parse_kv_response(self.shell.run_command(f"showmods -format list"))
-        # return resp[-1]
+        #resp = parse_kv_response(self.shell.run_command(f"showmods -format list"))
+        #return resp[-1]
         return self.shell.run_command(f"showmods -format list")
 
     def stclc_make_mod(self, url: str, desc: str) -> bool:
@@ -213,9 +211,7 @@ class Dsync_dm:
         if self.stclc_mod_exists(url):
             LOGGER.warn(f"The DSync module ({url}) already esists")
         else:
-            resp = self.shell.stream_command_disp(
-                f'mkmod {url} -comment "{desc}"', self.test_mode
-            )
+            resp = self.shell.stream_command_disp(f'mkmod {url} -comment "{desc}"', self.test_mode)
             if self.stclc_mod_exists(f"{url}"):
                 return False
             LOGGER.error(f"The module {url} was not created")
@@ -252,6 +248,10 @@ class Dsync_dm:
             module = "$env(SYNC_DEVAREA_TOP)"
         return self.shell.run_command(f"url vault {module}")
 
+    def stclc_get_url_root_dir(self, path: str = ".") -> str:
+        """Returns the root url for the path"""
+        return self.shell.run_command(f"url root {path}")
+
     def stclc_sitr_lookup(self, mod: str = "") -> str:
         """call stclc to do a sitr lookup to find new submits and return the response"""
         return self.shell.run_command(f"sitr lookup -report script {mod}")
@@ -260,12 +260,18 @@ class Dsync_dm:
         """run the sitr status command to show the status of the workspace"""
         return self.shell.run_command(f"sitr status")
 
-    def stclc_update_module(self, module: str, config: str = "") -> bool:
-        """update the specified module with the config/selector"""
-        args = f'{"-config" if config else ""} {config}'
-        self.shell.stream_command_disp(
-            f"set resp [sitr update -config {config} {module}]", self.test_mode
+    def stclc_sitr_submit(self, mod: str, comment: str, skipcheck: bool = False) -> str:
+        """run the sitr status command to show the status of the workspace"""
+        args = f'{"-skipcheck" if skipcheck else ""}'
+        return self.shell.run_command(
+            f'sitr submit -force -comment "{comment}" {args} {mod}'
         )
+
+    # TODO - should skiplock be an option?
+    def stclc_update_module(self, module: str, config: str = "", nooverwrite: bool = False) -> bool:
+        """update the specified module with the config/selector"""
+        args = f'{"-config" if config else ""} {config} {"-nooverwrite" if nooverwrite else ""}'
+        self.shell.stream_command_disp(f"set resp [sitr update -skiplock {args} {module}]", self.test_mode)
         resp = self.stclc_puts_resp()
         if resp:
             LOGGER.error(f"sitr update - {resp}")
@@ -275,7 +281,8 @@ class Dsync_dm:
     def stclc_populate_workspace(self, force: bool = False) -> bool:
         """populate the sitr workspace"""
         self.shell.stream_command_disp(
-            f'set resp [sitr pop -skiplock {"-force" if force else ""}]', self.test_mode
+            f'set resp [sitr pop -skiplock {"-force" if force else ""}]',
+            self.test_mode
         )
         resp = self.stclc_puts_resp()
         if resp:
@@ -297,39 +304,37 @@ class Dsync_dm:
     def stclc_add_sitr_mod(self, module: str, release: str, relpath: str = "") -> bool:
         """add the sitr module to the root module"""
         args = f'{"-relpath" if relpath else ""} {relpath}'
-        self.shell.stream_command_disp(
-            f"set resp [sitr select {module}@{release} {args}]", self.test_mode
-        )
+        self.shell.stream_command_disp(f"set resp [sitr select {module}@{release} {args}]", self.test_mode)
         resp = self.stclc_puts_resp()
         if resp:
             LOGGER.error(f"sitr select {resp}")
             return True
         return False
 
+
     def stclc_integrate(self, nopop: bool = False) -> str:
         """run the sitr integrate command"""
         self.shell.stream_command_disp(
             f'set resp [sitr integrate -noprompt {"-nopop" if nopop else ""}]',
-            self.test_mode,
+            self.test_mode
         )
         return self.stclc_puts_resp()
 
     def stclc_sitr_release(
-        self, comment: str, skip_check: bool = False, on_server: bool = False
+        self,
+        comment: str,
+        skip_check: bool = False,
+        on_server: bool = False
     ) -> str:
         """run the sitr release command"""
         args = f'{"-skipcheck" if skip_check else ""} {"-_fromserver" if on_server else ""}'
-        self.shell.stream_command_disp(
-            f'set resp [sitr release -comment "{comment}" {args}]', self.test_mode
-        )
+        self.shell.stream_command_disp(f'set resp [sitr release -comment "{comment}" {args}]', self.test_mode)
         return self.stclc_puts_resp()
 
-    def stclc_create_branch(
-        self, url: str, version: str, comment: str, email=None
-    ) -> bool:
+    def stclc_create_branch(self, url: str, version: str, comment: str, email=None) -> bool:
         self.shell.stream_command_disp(
             f'set resp [sitr mkbranch -comment "{comment}" {version} {url}]',
-            self.test_mode,
+            self.test_mode
         )
         resp = self.stclc_puts_resp()
         if resp:
@@ -343,7 +348,7 @@ class Dsync_dm:
         if resp == "ERROR":
             LOGGER.error(f"{msg}")
             return True
-        status = re.findall(r"{[^}]*}", resp)
+        status = re.findall(r'{[^}]*}', resp)
         print(status)
         if len(status) != 2:
             LOGGER.error(f"{msg}")
@@ -363,6 +368,14 @@ class Dsync_dm:
         if resp:
             kv = dm.parse_kv_response(resp)
             return kv[-1]
+        return None
+
+    def dssc_get_all_modules(self) -> str:
+        """return the module for the current working directory"""
+        resp = self.stclc_current_module()
+        if resp:
+            kv = dm.parse_kv_response(resp)
+            return kv
         return None
 
     def dssc_get_hrefs(self, url: str) -> List[Dict]:
@@ -398,17 +411,10 @@ class Dsync_dm:
             return self.stclc_check_in(mod_list, comment, rec=True)
         return False
 
-    def dssc_ls_modules(
-        self,
-        module: str,
-        modified: bool = False,
-        locked: bool = False,
-        unmanaged: bool = False,
-        filt: str = "",
-    ) -> List[Dict]:
+    def dssc_ls_modules(self, module: str, modified: bool = False, locked: bool = False, unmanaged: bool = False, filt: str = "") -> List[Dict]:
         """get a list of files that are checked out in the specified module"""
         resp = self.stclc_ls_modules(module, modified, locked, unmanaged, filt)
-        if not resp.strip().startswith("{"):
+        if not resp.strip().startswith('{'):
             return []
         resp = dm.parse_kv_response(resp)
         if resp:
@@ -521,6 +527,7 @@ class Dsync_dm:
             LOGGER.warn(f"The Href {full_url} does not exist")
             return False
         for href in hrefs:
+            LOGGER.debug(f"add href {full_url} - {href}")
             if url == href["url"]:
                 if selector == href["selector"]:
                     # LOGGER.warn(f"The Href {href['url']}@{href['selector']} is already present")
@@ -579,12 +586,12 @@ def main():
     if args.debug:
         log.set_debug()
     # Hack to work around Dsync symlinks
-    # path_of_script = Path(__file__).absolute().parent
-    # sys.path.append(str(path_of_script))
-    # from Spreadsheet_if import Spreadsheet_xls
+    #path_of_script = Path(__file__).absolute().parent
+    #sys.path.append(str(path_of_script))
+    #from Spreadsheet_if import Spreadsheet_xls
 
-    # ss = Spreadsheet_xls()
-    # if args.xls:
+    #ss = Spreadsheet_xls()
+    #if args.xls:
     #    ss.open_ss(args.xls)
     #    ss.set_active_sheet_no(0)
     #    ss.set_header_key("CORE NAME")
