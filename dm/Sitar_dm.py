@@ -60,7 +60,17 @@ def find_sitr_root_dir(dir: str = "") -> "Path":
         path = Path(dir)
     else:
         path = Path.cwd()
-    while path.parents and not Path(path / ".cshrc.project").exists():
+    user = getpass.getuser()
+    top = ""
+    if "SYNC_DEVAREA_TOP" in os.environ:
+        top = os.environ["SYNC_DEVAREA_TOP"]
+    while path.parents:
+        if path.stem == top:
+            return path.parent
+        if Path(path / ".cshrc.project").exists() and Path(path / ".shrc.project").exists():
+            return path
+        if Path(path / user / ".cshrc.project").exists() and Path(path / user / ".shrc.project").exists():
+            return path
         path = path.parent
     return path
 
@@ -107,6 +117,7 @@ class Sitar_dm(dm.Dsync_dm):
     ) -> bool:
         """populate the specified tag in all modules in update mode"""
         errors = []
+        LOGGER.debug(f"populating tag {tag} in {modules}")
         for mod in modules:
             path = sitr_mods[mod]["relpath"]
             args = f"-version {tag} -dir {path}"
@@ -124,8 +135,9 @@ class Sitar_dm(dm.Dsync_dm):
     ) -> bool:
         """populate a specified list of module configs if modules are not in update mode"""
         errors = []
+        LOGGER.debug(f"populating config {config_list}")
         for mod in sitr_mods:
-            if sitr_mods[mod]["status"] == "Update":
+            if sitr_mods[mod]["status"] == "Update mode":
                 continue
             if not mod in config_list:
                 continue
@@ -147,7 +159,9 @@ class Sitar_dm(dm.Dsync_dm):
             items = line.split()
             first_item = next(iter(items), "")
             if "%" in first_item:
-                modules[first_item[:-2]] = dict(zip(keys, items[1:]))
+                mod_name = first_item[:-2]
+                modules[mod_name] = dict(zip(keys, items[1:4] + [' '.join(items[4:])]))
+                LOGGER.debug(f"found sitr mod {mod_name} = {modules[mod_name]}")
         return modules
 
     def get_sitr_update_list(self, modules: List[str] = ()) -> List[str]:
@@ -174,7 +188,7 @@ class Sitar_dm(dm.Dsync_dm):
     def restore_module(self, sitr_mods: List[Dict], modules: List[str]) -> None:
         """put the modules specified back into mcache mode"""
         for mod in modules:
-            print(f"Restoring {mod} to version {sitr_mods[mod]['baseline']}")
+            LOGGER.info(f"Restoring {mod} to version {sitr_mods[mod]['baseline']}")
             self.update_module([mod], sitr_mods[mod]["baseline"])
 
     def sitr_show_unmanaged(self, sitr_mods: List[Dict], modules: List[str]) -> None:
@@ -217,19 +231,18 @@ class Sitar_dm(dm.Dsync_dm):
         """submit the specified modules"""
         errors = {}
         vers = {}
-        args = f'{"-skipcheck" if skipcheck else ""}'
+        LOGGER.debug(f"sitr submit of {modules}")
         for mod in modules:
-            resp = self.shell.run_command(
-                f'set resp [sitr submit -force -comment "{comment}" {args} {mod}]'
-            )
+            resp = self.stclc_sitr_submit(mod, comment, skipcheck)
 
             if resp:
                 errors[mod] = resp
                 vers[mod] = resp.partition("Tagging:")[-1]
+                LOGGER.debug(f"sitr submit {mod}, resp = {resp}, vers = {vers[mod]}")
 
         if errors:
             for mod in errors:
-                LOGGER.error(f"submit module {mod} - {errors[mod]}")
+                LOGGER.info(f"submit module {mod} - {errors[mod]}")
 
             if email is not None:
                 for mod in vers:
@@ -246,6 +259,7 @@ class Sitar_dm(dm.Dsync_dm):
             return True
         return False
 
+    # TODO - need to be able to accept a list of modules to run
     def flat_release_submit(
         self, sitr_mods: List[Dict], tag: str, comment: str, email=None
     ) -> Dict:
@@ -253,17 +267,22 @@ class Sitar_dm(dm.Dsync_dm):
         modules_to_submit = []
         mod_list = {}
         snap_tag = self.get_snapshot_tagname(tag)
+        LOGGER.info(f"Snapshot submit with tag = {snap_tag}")
         for mod in sitr_mods:
-            if sitr_mods[mod]["status"] == "Update":
+            if sitr_mods[mod]["status"] == "Update mode":
                 modules_to_submit.append(mod)
                 # TODO - what if _v1.2 was used?
                 mod_list[mod] = {"module": mod, "tagName": f"{snap_tag}_v1.1"}
             else:
                 selector = sitr_mods[mod]["selector"]
+                if selector[0].isdigit():
+                    LOGGER.error(f"Invalid selector {selector} for {mod}. Please do a sitr pop")
+                    return {}
                 mod_list[mod] = {"module": mod, "tagName": selector}
         if self.check_for_submit_errors(modules_to_submit):
             # TODO - raise exception?
             return {}
+        LOGGER.debug(f"mod list = {mod_list}")
         if self.snapshot_submit_module(
             sitr_mods, modules_to_submit, tag, comment, email=email
         ):
@@ -282,6 +301,7 @@ class Sitar_dm(dm.Dsync_dm):
         if self.stclc_mod_exists(url):
             LOGGER.warn(f"The DSync module ({url}) already esists")
             return False
+        LOGGER.debug(f"create branch, url = {url}, version = {version}")
         if self.stclc_create_branch(
             f'{os.environ["SYNC_DEVAREA_TOP"]}%0', version, comment
         ):
@@ -339,6 +359,8 @@ class Sitar_dm(dm.Dsync_dm):
         if errors:
             return {}
 
+        LOGGER.debug(f"branch modules {branches}")
+
         mod_list = {}
         for branch in branches:
             url = self.dssc_get_root_url(
@@ -359,6 +381,7 @@ class Sitar_dm(dm.Dsync_dm):
                 "module": branch["module"],
                 "tagName": f"{version}_v1.1",
             }
+            LOGGER.debug(f"adding {branch} - tag = {version}_v1.1, url = {url}, branched = {branched_url}")
         if errors:
             return {}
         return mod_list
@@ -385,7 +408,7 @@ class Sitar_dm(dm.Dsync_dm):
             select = "selector2"
         for mod in modules:
             args2 = ""
-            if sitr_mods[mod]["status"] != "Update":
+            if sitr_mods[mod]["status"] != "Update mode":
                 print(f"Skipping {mod} since it is not in update mode")
                 continue
             if is_baseline:
@@ -404,15 +427,13 @@ class Sitar_dm(dm.Dsync_dm):
             if not tag.endswith(":"):
                 tag += ":"
         for mod in modules:
-            if sitr_mods[mod]["status"] != "Update":
+            if sitr_mods[mod]["status"] != "Update mode":
                 print(f"Skipping {mod} since it is not in update mode")
                 continue
             print(f"Scanning {mod}")
             path = sitr_mods[mod]["relpath"]
             resp = self.stclc_module_contents(mod, tag, path)
-            parsed = dm.parse_kv_response(
-                "\n".join(resp.splitlines()[1:-1])
-            )  # skip first/last line
+            parsed = dm.parse_kv_response(resp.splitlines()[-1])
             if not parsed:
                 print(f"No matching files for {tag}")
                 continue
@@ -429,6 +450,7 @@ class Sitar_dm(dm.Dsync_dm):
                 config += ":"
         errors = []
         for mod in modules:
+            LOGGER.info(f"Updating {mod} to the config {config}")
             if self.stclc_update_module(mod, config):
                 errors.append(mod)
         if errors:
@@ -444,11 +466,12 @@ class Sitar_dm(dm.Dsync_dm):
         """Display a list of the files checked out in the specified modules"""
         errors = []
         for mod in modules:
-            if sitr_mods[mod]["status"] != "Update":
+            if sitr_mods[mod]["status"] != "Update mode":
                 LOGGER.warn(f"Ignoring the module {mod} since it is not in Update mode")
                 continue
             comment = f"Overlaying {tag} on the module {mod}"
-            if self.stclc_populate(f"{mod}:0", rec=False):
+            LOGGER.info(comment)
+            if self.stclc_populate(f"{mod}:0", rec=False, args=f"-overlay {tag}"):
                 errors.append(mod)
                 continue
             if self.stclc_check_in(f"{mod}:0", comment=comment, args="-noiflock"):
@@ -479,7 +502,7 @@ class Sitar_dm(dm.Dsync_dm):
                 continue
             path = sitr_mods[mod]["relpath"]
             resp = self.shell.run_command(f"cdws")
-            print(f"Tagging {mod} with {tag}")
+            LOGGER.info(f"Tagging {mod} with {tag}")
             if self.stclc_tag_files(tag, path, args=args):
                 errors.append(mod)
         if errors:
@@ -495,6 +518,7 @@ class Sitar_dm(dm.Dsync_dm):
         """for all of the hrefs, add the snapshot version to the snapshot version of the module"""
         status = False
         for href in hrefs:
+            LOGGER.debug(f"add href {href}, tag = {tag}")
             if href["type"] == "Module":
                 if self.stclc_tag_files(tag, f"{href['name']}%0", args=args):
                     status = True
@@ -520,6 +544,7 @@ class Sitar_dm(dm.Dsync_dm):
         """check modules for erros that would prevent the submit"""
         errors = set()
         for mod in modules:
+            print(f"Scanning the module {mod}")
             files = self.dssc_ls_modules(mod, locked=True)
             LOGGER.debug(f"results from show checkouts = {files}")
             if files:
@@ -554,13 +579,13 @@ class Sitar_dm(dm.Dsync_dm):
         snap_tag_base = self.get_snapshot_tagname(tag)
         errors = set()
         for mod in modules:
-            print(f"Performing the snapshot submit on {mod} with {snap_tag_base}")
+            LOGGER.info(f"Performing the snapshot submit on {mod} with {snap_tag_base}")
             # TODO - need to check if this tag exists, then the tag should be _v1.2
             snap_tag = snap_tag_base + "_v1.1"
-            LOGGER.debug(f"Using snapshot tag {snap_tag} for module {mod}")
             path = sitr_mods[mod]["relpath"]
             selector = sitr_mods[mod]["selector"]
             args = f'-rec -immutable -comment "{comment}"'
+            LOGGER.debug(f"Using snapshot tag {snap_tag} for module {mod}, selector = {selector}, path = {path}")
             hrefs = self.dssc_get_hrefs(mod)
             if hrefs:
                 args += f" -filter {','.join([x['relpath'] for x in hrefs])}"
@@ -587,11 +612,12 @@ class Sitar_dm(dm.Dsync_dm):
     def make_tapeout_ws(self, sitr_mods: List[Dict], tag: str) -> bool:
         """tag the files and modules with the tapeout tag to create the tapeout ws"""
         for mod in sitr_mods:
-            if sitr_mods[mod]["status"] != "Update":
+            if sitr_mods[mod]["status"] != "Update mode":
                 LOGGER.warn(f"The {mod} module is not in Update mode")
                 continue
             relpath = sitr_mods[mod]["relpath"]
             path = Path(os.environ["DSGN_PROJ"]) / relpath
+            LOGGER.debug(f"Make tapeout for {mod}, tag = {tag}, readme = {path}")
             readme = self.io.make_module_readme(path, f"SITaR module for {mod}")
             if readme.exists():
                 resp = self.stclc_get_file_status(str(readme))
@@ -618,7 +644,7 @@ class Sitar_dm(dm.Dsync_dm):
         """put all of the modules into update mode with the tapeout selector"""
         errors = []
         for mod in sitr_mods:
-            if sitr_mods[mod]["status"] != "Update":
+            if sitr_mods[mod]["status"] != "Update mode":
                 LOGGER.warn(f"The {mod} module is not in Update mode")
             elif sitr_mods[mod]["selector"] != tag:
                 LOGGER.warn(
@@ -645,7 +671,7 @@ class Sitar_dm(dm.Dsync_dm):
             config += ":"
         errors = []
         for mod in sitr_mods:
-            if sitr_mods[mod]["status"] != "Update":
+            if sitr_mods[mod]["status"] != "Update mode":
                 LOGGER.warn(f"The {mod} module is not in Update mode")
 
             # FIXME: BROKEN: no `tag` below!
@@ -699,7 +725,7 @@ class Sitar_dm(dm.Dsync_dm):
         """update the specified modules and populate the baseline tag"""
         status = False
         for mod in modules:
-            if sitr_mods[mod]["status"] != "Update":
+            if sitr_mods[mod]["status"] != "Update mode":
                 self.update_module([mod])
             tag = sitr_mods[mod]["baseline"]
             status += self.sitr_populate_tag(sitr_mods, [mod], tag, force)
@@ -718,6 +744,7 @@ class Sitar_dm(dm.Dsync_dm):
         kv_resp = dm.parse_kv_response(f"{resp_str}")
         for url, settings in kv_resp.items():
             (base_url, selector) = url.split("@")
+            LOGGER.debug(f"lookup found {base_url} {selector}, only allow {allowed_prefixes}")
             if any(selector.startswith(p) for p in allowed_prefixes) and re.search(
                 r"v\d\.\d+$", selector
             ):
@@ -741,7 +768,7 @@ class Sitar_dm(dm.Dsync_dm):
             for module, mod in mod_list.items():
                 module_name = mod["module"]
                 module_tag = mod["tagName"]
-                print(f"Integrating mod {module_name} with tag {module_tag}")
+                LOGGER.info(f"Integrating mod {module_name} with tag {module_tag}")
                 if self.stclc_add_sitr_mod(module_name, module_tag):
                     # TODO - raise exception?
                     errors.append(module_name)
