@@ -4,27 +4,33 @@ if ( $?DSGN_PROJ ) then
 endif
 if ( -r .cshrc.project ) then
     source .cshrc.project
+else if (-r $USER/.cshrc.project ) then
+    source $USER/.cshrc.project
 else
-    echo "ERROR! Cannot find the .cshrc.project file for the workspace"
+    echo "ERROR! Cannot find the DSGN_PROJ/.cshrc.project file for the workspace"
 endif
 if ( $?QC_CONFIG_DIR ) then
     if ( -r ${QC_CONFIG_DIR}/.cshrc.project ) then
         source ${QC_CONFIG_DIR}/.cshrc.project
     else
-        echo "ERROR! Cannot find the .cshrc.project file for the project"
+        echo "ERROR! Cannot find the QC_CONFIG_DIR/.cshrc.project file for the project"
     endif
 else
     echo "ERROR! QC_CONFIG_DIR is not defined"
 endif
 if ( $?RFA_MODELERS_DIR ) then
     if ( -r ${RFA_MODELERS_DIR}/skill/.cshrc ) then
-        setenv QC_HOME_DIR $HOME
-        setenv HOME ${RFA_MODELERS_DIR}/skill
+        if ( $?QC_WTF_COMMAND_MODE ) then
+            echo Setting WTF Command mode
+            source ${RFA_MODELERS_DIR}/skill/.cshrc
+        else
+            echo Normal mode
+            setenv QC_HOME_DIR $HOME
+            setenv HOME ${RFA_MODELERS_DIR}/skill
+        endif
     else
         echo "ERROR! Cannot find the workspace .cshrc file"
     endif
 else
     echo "ERROR! RFA_MODELERS is not defined"
 endif
-
-
