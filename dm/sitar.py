@@ -1170,24 +1170,20 @@ def set_ws(args: argparse.Namespace, config: ConfigParser) -> int:
     #     # if not config.has_section(ws_section):
     #     #     ws_section = f"area:{ws_name.lower()}_v100_{user_name}"
     if not config.has_section(ws_section):
-
         all_areas_names = [area["name"] for area in all_areas(config)]
 
-        # filter is provided
-        if ws_name:
-            filtered_areas = filter_workspaces(all_areas(config), ws_name)
-        else:
+        if not ws_name:
             log_info("Did not provided any workspace name: %s!" % ws_name)
-            filtered_areas = all_areas_names
+            options = all_areas_names
+        else:
+            options = filter_workspaces(all_areas(config), ws_name)
 
         # No filtered entries
-        # Set filtered_areas to all area names so they are displayes as options
-        if not filtered_areas:
+        if not options:
             log_info(f"Filter {ws_name} is invalid, displaying all areas.")
-            filtered_areas = all_areas_names
 
         print("Please choose one of these workspaces:")
-        choice = choose_option(filtered_areas)
+        choice = choose_option(options)
 
         ws_section = f"area:{choice.lower()}"
 
