@@ -982,22 +982,23 @@ def make_ws(args: argparse.Namespace, config: ConfigParser) -> int:
 
     dev_projects = list(all_devs(config, filter_unavailable=True))
     projects_names = [section["name"] for section in dev_projects]
-
     exact_match = args.dev_name in args.projects_name
 
     # if partial dev_name provided, filter spaces
-    project_names_options = []
+    filtered_names = []
     if not exact_match:
-        project_names_options = filter_workspaces(dev_projects, args.dev_name)
+        filtered_names = filter_workspaces(dev_projects, args.dev_name)
 
     # If partial dev_name provided does not match any name
-    if not project_names_options:
+    if not exact_match and not filtered_names:
         log_info(
             "You did not enter any input Or your input did not match any available projects.\n"
             "Listing all Available Projects"
         )
         # Display all options
         project_names_options = projects_names
+    else:
+        project_names_options = filtered_names
 
     # Display filterd dev_names or all and ask for one
     if not exact_match:
@@ -1183,6 +1184,7 @@ def set_ws(args: argparse.Namespace, config: ConfigParser) -> int:
         # No filtered entries
         if not options:
             log_info(f"Filter {ws_name} is invalid, displaying all areas.")
+            options = all_areas_names
 
         print("Please choose one of these workspaces:")
         if not exact_match:
