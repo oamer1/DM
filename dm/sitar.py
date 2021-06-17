@@ -178,6 +178,7 @@ class WS_Builder(object):
             "QC_SYNC_DEVNAME": self.development_name,
             "PROJECT_DIR": self.project_dir,
             "DSGN_PROJ": self.dsgn_proj,
+            "PROJ_USER_WORK": self.user_dir,
             "LD_LIBRARY_PATH": "/pkg/qct/software/tcl/8.4.6/lib",
             "QC_CONFIG_DIR": "${DSGN_PROJ}/config",
         }
@@ -983,7 +984,7 @@ def make_ws(args: argparse.Namespace, config: ConfigParser) -> int:
     dev_projects = list(all_devs(config, filter_unavailable=True))
     projects_names = [section["name"] for section in dev_projects]
 
-    exact_match = args.dev_name in args.projects_name
+    exact_match = args.dev_name in projects_names
 
     # if partial dev_name provided, filter spaces
     project_names_options = []
@@ -1117,17 +1118,19 @@ def setup_set_ws_args(parser: argparse.ArgumentParser):
     )
 
 
-def setup_shell(ws_path: str, dev_name: str = None, xterm: bool = False, cmd="") -> int:
+def setup_shell(ws_path: str, dev_name: str = None, xterm: bool = False, cmd="", shell_flag: bool = False) -> int:
     """prepare and start an interactive shell for a workspace."""
 
     sub_env = os.environ.copy()
     if dev_name:
         sub_env["QC_SYNC_DEVNAME"] = dev_name
 
+    if shell_flag and cmd:
+        sub_env["QC_WTF_COMMAND_MODE"] = "1"
+
     command = ("tcsh -c 'source {}/cshrc.sitar ; {runcmd}'").format(
         SCRIPT_DIR, runcmd="tcsh" if not cmd else cmd
     )
-
     if xterm:
         command = f"xterm -e {command}"
 
@@ -1212,7 +1215,7 @@ def shell(args: argparse.Namespace, config: ConfigParser) -> int:
     if not rc_file_dir:
         log_error("Cannot determine current project and/or workspace!")
 
-    return setup_shell(rc_file_dir, cmd=args.cmd)
+    return setup_shell(rc_file_dir, cmd=args.cmd, shell_flag=True)
 
 
 @command(help="run sda gui")
