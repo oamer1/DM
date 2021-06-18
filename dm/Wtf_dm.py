@@ -384,6 +384,9 @@ class Wtf_dm(dm.Sitar_dm):
         do_perf: bool = False,
     ) -> bool:
         """Run diagnostics on the modules specified"""
+        # Default JIRA email for diag function
+        diag_JIRA_Email = ""
+
         if not self.sitr_mods:
             LOGGER.error("No SITaR modules found.")
             return True
@@ -522,11 +525,18 @@ class Wtf_dm(dm.Sitar_dm):
                         for err in errors:
                             LOGGER.error(err)
                         if interactive:
+
+                            comment = ", ".join(errors)
+                            self.jira(
+                                subject="Error running diagnostics, diag command.",
+                                comment=f"Errors: {comment}",
+                                email=diag_JIRA_Email,
+                            )
+
                             if not self.io.prompt_to_continue(
                                 f"File a JIRA with dmrfa.help?"
                             ):
                                 continue
-                            # TODO - open a JIRA
                             print("Not supported yet")
             else:
                 # Check to make sure that the module is cached
@@ -550,7 +560,9 @@ class Wtf_dm(dm.Sitar_dm):
         self.dump_dss_logfile_to_log()
         self.run_cdws()
 
-    def jira(self, subject: str, comment: str, log_file: Path, email: str) -> int:
+    def jira(
+        self, subject: str, comment: str, email: str, log_file: Path = None
+    ) -> int:
         """
         Send jira email with subject and comment and attachment log_file
         """
