@@ -43,14 +43,17 @@ def get_netlist_info() -> Dict:
     et = ET()
     doc = et.parse(str(fname))
     try:
-        section = doc.find('Netlists')
+        section = doc.find("Netlists")
         values = section.find("values")
         netlists = {}
         for netlist in values.getchildren():
-            netlists[netlist.attrib['name']] = { key : netlist.attrib[key] for key in netlist.keys() }
+            netlists[netlist.attrib["name"]] = {
+                key: netlist.attrib[key] for key in netlist.keys()
+            }
         return netlists
     except Exception as err:
         return {}
+
 
 def get_email(config_dir_path: Path, user: str) -> str:
     """

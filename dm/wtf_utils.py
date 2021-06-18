@@ -82,4 +82,3 @@ def choose_option(options: Sequence[str]) -> str:
     choice = ask_option_number(len(options))
 
     return options[choice]
-

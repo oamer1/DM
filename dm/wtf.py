@@ -444,10 +444,27 @@ def setup_netlist_args(parser):
         metavar="CONFIG",
         type=str,
     )
-    parser.add_argument("-s", "--show", action="store_true", help="Show the configs available in the project.xml file")
-    parser.add_argument("-v", "--voos", action="store_true", help="Run voos on the config")
-    parser.add_argument("-t", "--textInputs", action="store_true", help="Generate the textInputs file from the config")
-    parser.add_argument("-n", "--netlist", action="store_true", help="Generate the netlist for the config")
+    parser.add_argument(
+        "-s",
+        "--show",
+        action="store_true",
+        help="Show the configs available in the project.xml file",
+    )
+    parser.add_argument(
+        "-v", "--voos", action="store_true", help="Run voos on the config"
+    )
+    parser.add_argument(
+        "-t",
+        "--textInputs",
+        action="store_true",
+        help="Generate the textInputs file from the config",
+    )
+    parser.add_argument(
+        "-n",
+        "--netlist",
+        action="store_true",
+        help="Generate the netlist for the config",
+    )
     parser.add_argument(
         "-o",
         "--output",
@@ -463,22 +480,28 @@ def netlist(cad, args: argparse.Namespace) -> int:
     """Run a netlist from the config"""
     netlists = dm.get_netlist_info()
     if args.show:
-        LOGGER.info(f"The following configs are defined in the project.xml file: {' '.join(netlists)}")
+        LOGGER.info(
+            f"The following configs are defined in the project.xml file: {' '.join(netlists)}"
+        )
 
     if args.config in netlists:
-        lib = netlists[args.config]['config_lib']
-        cell = netlists[args.config]['config_cell']
-        view = netlists[args.config]['config_name']
+        lib = netlists[args.config]["config_lib"]
+        cell = netlists[args.config]["config_cell"]
+        view = netlists[args.config]["config_name"]
         if not args.voos and not args.textInputs:
             args.netlist = True
     else:
         try:
-            (lib, cell, view) = args.config.split(':')
+            (lib, cell, view) = args.config.split(":")
             if args.netlist:
-                LOGGER.error(f"Netlisting can only be done on a config defined in the project.xml file")
+                LOGGER.error(
+                    f"Netlisting can only be done on a config defined in the project.xml file"
+                )
                 return 1
         except Exception as err:
-            LOGGER.error(f"The config {args.config} was not defined in the project.xml file")
+            LOGGER.error(
+                f"The config {args.config} was not defined in the project.xml file"
+            )
             return 1
 
     path = Path(os.environ["PROJ_USER_WORK"])
@@ -524,15 +547,25 @@ def setup_ws(dssc, args: argparse.Namespace) -> int:
 
 def setup_diag_args(parser):
     """handle the command line arguments for diag"""
-    parser.add_argument("-P", "--no_pop", help="Do not populate modules", action="store_true")
-    parser.add_argument("-S", "--no_scan", help="Do not scan modules", action="store_true")
-    parser.add_argument("-n", "--no_interactive", help="Do not prompt for actions", action="store_true")
+    parser.add_argument(
+        "-P", "--no_pop", help="Do not populate modules", action="store_true"
+    )
+    parser.add_argument(
+        "-S", "--no_scan", help="Do not scan modules", action="store_true"
+    )
+    parser.add_argument(
+        "-n", "--no_interactive", help="Do not prompt for actions", action="store_true"
+    )
 
 
 @command(setup=setup_diag_args)
 def diag(dssc, args: argparse.Namespace) -> int:
     """Run diagnostics on the specified module"""
-    return dssc.diag(interactive=not args.no_interactive, do_pop=not args.no_pop, do_scan=not args.no_scan)
+    return dssc.diag(
+        interactive=not args.no_interactive,
+        do_pop=not args.no_pop,
+        do_scan=not args.no_scan,
+    )
 
 
 @command()

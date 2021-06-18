@@ -8,6 +8,7 @@ from typing import Dict, List
 import jinja2
 import os
 
+
 def send_email(
     subject: str,
     sender: str,

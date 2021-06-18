@@ -67,9 +67,15 @@ def find_sitr_root_dir(dir: str = "") -> "Path":
     while path.parents:
         if path.stem == top:
             return path.parent
-        if Path(path / ".cshrc.project").exists() and Path(path / ".shrc.project").exists():
+        if (
+            Path(path / ".cshrc.project").exists()
+            and Path(path / ".shrc.project").exists()
+        ):
             return path
-        if Path(path / user / ".cshrc.project").exists() and Path(path / user / ".shrc.project").exists():
+        if (
+            Path(path / user / ".cshrc.project").exists()
+            and Path(path / user / ".shrc.project").exists()
+        ):
             return path
         path = path.parent
     return path
@@ -160,7 +166,7 @@ class Sitar_dm(dm.Dsync_dm):
             first_item = next(iter(items), "")
             if "%" in first_item:
                 mod_name = first_item[:-2]
-                modules[mod_name] = dict(zip(keys, items[1:4] + [' '.join(items[4:])]))
+                modules[mod_name] = dict(zip(keys, items[1:4] + [" ".join(items[4:])]))
                 LOGGER.debug(f"found sitr mod {mod_name} = {modules[mod_name]}")
         return modules
 
@@ -276,7 +282,9 @@ class Sitar_dm(dm.Dsync_dm):
             else:
                 selector = sitr_mods[mod]["selector"]
                 if selector[0].isdigit():
-                    LOGGER.error(f"Invalid selector {selector} for {mod}. Please do a sitr pop")
+                    LOGGER.error(
+                        f"Invalid selector {selector} for {mod}. Please do a sitr pop"
+                    )
                     return {}
                 mod_list[mod] = {"module": mod, "tagName": selector}
         if self.check_for_submit_errors(modules_to_submit):
@@ -381,7 +389,9 @@ class Sitar_dm(dm.Dsync_dm):
                 "module": branch["module"],
                 "tagName": f"{version}_v1.1",
             }
-            LOGGER.debug(f"adding {branch} - tag = {version}_v1.1, url = {url}, branched = {branched_url}")
+            LOGGER.debug(
+                f"adding {branch} - tag = {version}_v1.1, url = {url}, branched = {branched_url}"
+            )
         if errors:
             return {}
         return mod_list
@@ -585,7 +595,9 @@ class Sitar_dm(dm.Dsync_dm):
             path = sitr_mods[mod]["relpath"]
             selector = sitr_mods[mod]["selector"]
             args = f'-rec -immutable -comment "{comment}"'
-            LOGGER.debug(f"Using snapshot tag {snap_tag} for module {mod}, selector = {selector}, path = {path}")
+            LOGGER.debug(
+                f"Using snapshot tag {snap_tag} for module {mod}, selector = {selector}, path = {path}"
+            )
             hrefs = self.dssc_get_hrefs(mod)
             if hrefs:
                 args += f" -filter {','.join([x['relpath'] for x in hrefs])}"
@@ -744,7 +756,9 @@ class Sitar_dm(dm.Dsync_dm):
         kv_resp = dm.parse_kv_response(f"{resp_str}")
         for url, settings in kv_resp.items():
             (base_url, selector) = url.split("@")
-            LOGGER.debug(f"lookup found {base_url} {selector}, only allow {allowed_prefixes}")
+            LOGGER.debug(
+                f"lookup found {base_url} {selector}, only allow {allowed_prefixes}"
+            )
             if any(selector.startswith(p) for p in allowed_prefixes) and re.search(
                 r"v\d\.\d+$", selector
             ):
