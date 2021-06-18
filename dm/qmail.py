@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Dict, List
 import jinja2
 import os
+import logging
 
 
 def send_email(
@@ -22,6 +23,13 @@ def send_email(
     Sends an email with `subject`, from `sender` to `recipients` with the given
     `content` body using Email.html template.
     """
+    RFA_DIR = Path(os.environ["RFA_MODELERS_DIR"])
+    path_dir = RFA_DIR / "python3" / "dm" / "Email_template"
+
+    if not path_dir.is_dir():
+        logging.error("Email_Template folder not found.")
+        return 1
+
     # Map command to its respective html template
     Email_templates = {
         "integrate": "EMAIL_Integrate.html",
@@ -34,19 +42,17 @@ def send_email(
     }
     user = getpass.getuser()
 
+    commands = list(Email_templates.keys())
+    if command_template not in commands:
+        raise ValueError(f"Unknown Command : {command_template} not in {commands}")
+
     if command_template == "request_branch":
         subject = f"New Branch Requested by {user}"
     else:
         subject = f"Wtf {command_template} command"
-    commands = list(Email_templates.keys())
 
-    if command_template not in commands:
-        raise ValueError(f"Unknown Command : {command_template} not in {commands}")
     Email_file = Email_templates[command_template]
     # Load EMAIL_Submit.html template
-
-    RFA_DIR = Path(os.environ["RFA_MODELERS_DIR"])
-    path_dir = str(RFA_DIR / "python3" / "dm" / "Email_template")
 
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(searchpath=path_dir))
     mail_template = env.get_template(Email_file)
