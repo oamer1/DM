@@ -47,6 +47,7 @@ class Wtf_dm(dm.Sitar_dm):
         self.module_given = False
         self.dev_dir = None
         self.version = None
+        self.diag_JIRA_Email = "dmrfa.help"
 
     @property
     def email(self):
@@ -383,7 +384,7 @@ class Wtf_dm(dm.Sitar_dm):
             return True
         root_dir = self.stclc_get_url_root_dir(self)
         # TODO - why does this not work?
-        #if root_dir != os.environ['SYNC_DEVAREA_DIR']:
+        # if root_dir != os.environ['SYNC_DEVAREA_DIR']:
         #    LOGGER.error(f"Invalid url root {root_dir}, should be {os.environ['SYNC_DEVAREA_DIR']}.")
         #    #return True
         return False
@@ -393,84 +394,118 @@ class Wtf_dm(dm.Sitar_dm):
         mod_list = []
         mods = self.dssc_get_all_modules()
         for mod in mods:
-            if not mod['modinstname'].endswith('%0'):
+            if not mod["modinstname"].endswith("%0"):
                 LOGGER.error(f"Bad module instance name {mod['modinstname']}.")
                 if interactive:
                     if not self.io.prompt_to_continue(f"Remove module"):
                         continue
-                    self.stclc_rmfile(mod['modinstname'])
-            if mod['name'] in mod_list:
+                    self.stclc_rmfile(mod["modinstname"])
+            if mod["name"] in mod_list:
                 LOGGER.error(f"The module {mod['name']} is defined multiple times.")
             else:
-                mod_list.append(mod['name'])
+                mod_list.append(mod["name"])
         if not mods:
             LOGGER.error("No Design Sync modules found.")
             return True
         if not os.environ["SYNC_DEVAREA_TOP"] in mod_list:
-            LOGGER.error(f'The top container module {os.environ["SYNC_DEVAREA_TOP"]} was not found.')
+            LOGGER.error(
+                f'The top container module {os.environ["SYNC_DEVAREA_TOP"]} was not found.'
+            )
             return True
         return False
 
     def diag_check_bad_sitr_module(self, mod: str, interactive: bool = True) -> bool:
         """if the status of the module is bad, then fix it up, return True if a fix was done"""
-        if self.sitr_mods[mod]['status'] == "NA" or self.sitr_mods[mod]['selector'][0].isdigit():
+        if (
+            self.sitr_mods[mod]["status"] == "NA"
+            or self.sitr_mods[mod]["selector"][0].isdigit()
+        ):
             if interactive:
                 if not self.io.prompt_to_continue(f"Restore the {mod} module"):
                     return False
-                LOGGER.info(f"Restoring {mod} to version {self.sitr_mods[mod]['baseline']}")
+                LOGGER.info(
+                    f"Restoring {mod} to version {self.sitr_mods[mod]['baseline']}"
+                )
                 self.stclc_update_module(mod, self.sitr_mods[mod]["baseline"])
                 return True
         return False
 
-    def diag_check_for_update_mode(self, mod: str, abspath: 'Path', interactive: bool = True) -> bool:
+    def diag_check_for_update_mode(
+        self, mod: str, abspath: "Path", interactive: bool = True
+    ) -> bool:
         """for a module in update mode, perform some checks and fix if possible. If fixed return true"""
         branch = self.stclc_get_branch() + ":"
         if not abspath.is_dir():
-            LOGGER.error(f"The sitr module {mod} at {self.sitr_mods[mod]['relpath']} not a directory.")
+            LOGGER.error(
+                f"The sitr module {mod} at {self.sitr_mods[mod]['relpath']} not a directory."
+            )
             if interactive:
                 if not self.io.prompt_to_continue(f"Restore the {mod} module"):
                     return False
-                LOGGER.info(f"Restoring {mod} to version {self.sitr_mods[mod]['baseline']}")
+                LOGGER.info(
+                    f"Restoring {mod} to version {self.sitr_mods[mod]['baseline']}"
+                )
                 self.stclc_update_module(mod, self.sitr_mods[mod]["baseline"])
                 return True
-        if self.sitr_mods[mod]['selector'] != branch:
-            LOGGER.error(f"The branch for the module {mod} is {self.sitr_mods[mod]['selector']} not {branch}.")
+        if self.sitr_mods[mod]["selector"] != branch:
+            LOGGER.error(
+                f"The branch for the module {mod} is {self.sitr_mods[mod]['selector']} not {branch}."
+            )
             if interactive:
-                if not self.io.prompt_to_continue(f"Put the {mod} module back onto the {branch} branch"):
+                if not self.io.prompt_to_continue(
+                    f"Put the {mod} module back onto the {branch} branch"
+                ):
                     return False
-                self.stclc_update_module(mod, self.sitr_mods[mod]["baseline"], nooverwrite=True)
+                self.stclc_update_module(
+                    mod, self.sitr_mods[mod]["baseline"], nooverwrite=True
+                )
                 return True
         return False
 
-    def diag_check_for_modified_not_locked(self, mod: str, interactive: bool = True) -> None:
+    def diag_check_for_modified_not_locked(
+        self, mod: str, interactive: bool = True
+    ) -> None:
         """scan for modified but not locked"""
         files = self.dssc_ls_modules(mod, modified=True)
         mod_files = []
         for file in files:
-            if file['fetchedstate'] != 'Lock':
-                LOGGER.error(f"In the module {mod}, the file {file['name']} is modified but not locked ({file['fetchedstate']}).")
+            if file["fetchedstate"] != "Lock":
+                LOGGER.error(
+                    f"In the module {mod}, the file {file['name']} is modified but not locked ({file['fetchedstate']})."
+                )
                 mod_files.append(file)
         if mod_files and interactive:
             if self.io.prompt_to_continue(f"File a JIRA with dmrfa.help"):
-                # TODO - open a JIRA
+                comment = "Error: file Modified but not locked "
+                self.jira(
+                    subject="Error running diagnostics, diag command.",
+                    comment=comment,
+                    email=self.diag_JIRA_Email,
+                )
                 print("Not supported yet")
 
-    def diag_check_for_unmanaged_view(self, relpath: 'Path', abspath: 'Path', interactive: bool = True) -> bool:
+    def diag_check_for_unmanaged_view(
+        self, relpath: "Path", abspath: "Path", interactive: bool = True
+    ) -> bool:
         """Scan for unmanaged cadence views with contents that are symlinks"""
         files = self.dssc_ls_modules(relpath, unmanaged=True)
         for file in files:
-            if file['name'].endswith('.sync.cds'):
-                path = abspath / file['name'][:-9]
+            if file["name"].endswith(".sync.cds"):
+                path = abspath / file["name"][:-9]
                 for item in path.iterdir():
-                    if item.endswith('.oa-') or item.endswith('.oa%'):
+                    if item.endswith(".oa-") or item.endswith(".oa%"):
                         LOGGER.error(f"Bad file found in cadence view ({item}).")
-                        if interactive and self.io.prompt_to_continue(f"Remove the file"):
+                        if interactive and self.io.prompt_to_continue(
+                            f"Remove the file"
+                        ):
                             item.unlink()
                     elif item.is_symlink():
-                        LOGGER.error(f"The view {file['name']} is unmanaged but has a symlink ({item}).")
+                        LOGGER.error(
+                            f"The view {file['name']} is unmanaged but has a symlink ({item})."
+                        )
                         # TODO - should fix this
 
-    def diag_get_dirlist(self, path: 'Path') -> List['Path']:
+    def diag_get_dirlist(self, path: "Path") -> List["Path"]:
         """Return a list of directories below the specified starting path"""
         dirlist = []
         if path.is_dir():
@@ -480,11 +515,13 @@ class Wtf_dm(dm.Sitar_dm):
                     dirlist.extend(self.diag_get_dirlist(item))
         return dirlist
 
-    def diag_check_for_permissions(self, abspath: 'Path', interactive: bool = True) -> bool:
+    def diag_check_for_permissions(
+        self, abspath: "Path", interactive: bool = True
+    ) -> bool:
         """Scan for bad permissions on directories"""
         import stat
 
-        exp_gid = Path(os.environ['SYNC_DEVAREA_DIR']).stat().st_gid
+        exp_gid = Path(os.environ["SYNC_DEVAREA_DIR"]).stat().st_gid
         for dir in self.diag_get_dirlist(abspath):
             if not dir.stat().st_mode & stat.S_IWGRP:
                 LOGGER.error(f"The directory {dir} is not group writable.")
@@ -493,27 +530,45 @@ class Wtf_dm(dm.Sitar_dm):
                 LOGGER.error(f"The directory {dir} is not group readable.")
                 # TODO - should fix this
             if not dir.stat().st_mode & stat.S_ISGID:
-                LOGGER.error(f"The directory {dir} does not have the group sticky bit set.")
+                LOGGER.error(
+                    f"The directory {dir} does not have the group sticky bit set."
+                )
                 # TODO - should fix this
 
-    def diag_fix_up_overlaps(self, overlaps: List, relpath: 'Path', interactive: bool = True) -> None:
+    def diag_fix_up_overlaps(
+        self, overlaps: List, relpath: "Path", interactive: bool = True
+    ) -> None:
         """get a list of files that are unmanaged and overlap with a managed version and fix up"""
         for file in overlaps:
             path = relpath / file
-            LOGGER.error(f"The file {relpath / file} is unmanaged, but a managed version exists in the vault.")
+            LOGGER.error(
+                f"The file {relpath / file} is unmanaged, but a managed version exists in the vault."
+            )
             if interactive:
-                if self.io.prompt_to_continue(f"Remove the version in the workspace and populate the version in the vault"):
+                if self.io.prompt_to_continue(
+                    f"Remove the version in the workspace and populate the version in the vault"
+                ):
                     self.stclc_rmfile(relpath / file)
                     self.stclc_check_out(relpath / file, locked=False)
-                elif self.io.prompt_to_continue(f"Check in the version in the workspace and overwrite the version in the vault"):
-                    self.stclc_check_in(str(realpath / file), "Overwrite with unmanaged version", args="-new -noiflock -skip")
+                elif self.io.prompt_to_continue(
+                    f"Check in the version in the workspace and overwrite the version in the vault"
+                ):
+                    self.stclc_check_in(
+                        str(realpath / file),
+                        "Overwrite with unmanaged version",
+                        args="-new -noiflock -skip",
+                    )
 
-    def diag_parse_pop_logfile(self, fname: 'Path', relpath: 'Path', interactive: bool = True) -> None:
+    def diag_parse_pop_logfile(
+        self, fname: "Path", relpath: "Path", interactive: bool = True
+    ) -> None:
         """parse a logfile from populate and fix issues and report errors"""
         contents = fname.read_text()
-        overlap_def = re.compile(r'.*%0/(\S+)\s+:\s+Error: File Overlaps with Existing Unmanaged Object or Folder')
-        file_def = re.compile(r'ERROR: file://(\S+)')
-        target_def = re.compile(r'is already associated with target')
+        overlap_def = re.compile(
+            r".*%0/(\S+)\s+:\s+Error: File Overlaps with Existing Unmanaged Object or Folder"
+        )
+        file_def = re.compile(r"ERROR: file://(\S+)")
+        target_def = re.compile(r"is already associated with target")
         overlaps = []
         errors = []
         parse = False
@@ -542,19 +597,28 @@ class Wtf_dm(dm.Sitar_dm):
                 self.stclc_rmfolder(file)
                 # TODO - need to repopulate?
                 continue
-            if 'Error:' in line :
+            if "Error:" in line:
                 errors.append(line)
-            elif 'Failed' in line :
+            elif "Failed" in line:
                 errors.append(line)
         self.diag_fix_up_overlaps(overlaps, relpath)
         if errors:
             for err in errors:
                 LOGGER.error(err)
-            if interactive and self.io.prompt_to_continue(f"File a JIRA with dmrfa.help"):
-                # TODO - open a JIRA
+            if interactive and self.io.prompt_to_continue(
+                f"File a JIRA with dmrfa.help"
+            ):
+                comment = ", ".join(errors)
+                self.jira(
+                    subject="Error running diagnostics, diag command.",
+                    comment=f"Errors: {comment}",
+                    email=self.diag_JIRA_Email,
+                )
                 print("Not supported yet")
 
-    def diag_check_pop_module(self, mod: str, relpath: 'Path', interactive: bool = True) -> None:
+    def diag_check_pop_module(
+        self, mod: str, relpath: "Path", interactive: bool = True
+    ) -> None:
         """populate the module and check for errors in the logfile"""
         if interactive:
             if not self.io.prompt_to_continue(f"Populate the {mod} module"):
@@ -569,16 +633,22 @@ class Wtf_dm(dm.Sitar_dm):
 
     def diag_check_for_sync_module(self, mod: str, interactive: bool = True) -> bool:
         """check modules that are in-sync and make sure they are cached"""
-        #if not mod == 'SIM_DATA' and not abspath.is_symlink():
+        # if not mod == 'SIM_DATA' and not abspath.is_symlink():
         #    LOGGER.warn(f"The sitr module {mod} at {self.sitr_mods[mod]['relpath']} not a symlink.")
-            #if interactive:
-            #    # TODO - check the mcache
-            #    if not self.io.prompt_to_continue(f"Restore the {mod} module"):
-            #        continue
-            #    LOGGER.info(f"Restoring {mod} to version {self.sitr_mods[mod]['baseline']}")
-            #    self.stclc_update_module(mod, self.sitr_mods[mod]["baseline"])
+        # if interactive:
+        #    # TODO - check the mcache
+        #    if not self.io.prompt_to_continue(f"Restore the {mod} module"):
+        #        continue
+        #    LOGGER.info(f"Restoring {mod} to version {self.sitr_mods[mod]['baseline']}")
+        #    self.stclc_update_module(mod, self.sitr_mods[mod]["baseline"])
 
-    def diag(self, interactive: bool = True, do_pop: bool = False, do_scan: bool = False, do_perf: bool = False) -> bool:
+    def diag(
+        self,
+        interactive: bool = True,
+        do_pop: bool = False,
+        do_scan: bool = False,
+        do_perf: bool = False,
+    ) -> bool:
         """Run diagnostics on the modules specified"""
         if self.diag_basic_checks():
             return True
@@ -589,8 +659,8 @@ class Wtf_dm(dm.Sitar_dm):
         for mod in self.modules:
             if self.diag_check_bad_sitr_module(mod, interactive):
                 continue
-            elif self.sitr_mods[mod]['status'] == "Update mode":
-                relpath = Path(self.sitr_mods[mod]['relpath'])
+            elif self.sitr_mods[mod]["status"] == "Update mode":
+                relpath = Path(self.sitr_mods[mod]["relpath"])
                 abspath = Path(os.environ["DSGN_PROJ"]) / relpath
                 if self.diag_check_for_update_mode(mod, abspath, interactive):
                     continue
@@ -611,7 +681,9 @@ class Wtf_dm(dm.Sitar_dm):
         self.dump_dss_logfile_to_log()
         self.run_cdws()
 
-    def jira(self, subject: str, comment: str, log_file: Path, email: str) -> int:
+    def jira(
+        self, subject: str, comment: str, email: str, log_file: Path = None
+    ) -> int:
         """
         Send jira email with subject and comment and attachment log_file
         """
