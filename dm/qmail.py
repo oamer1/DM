@@ -10,6 +10,9 @@ import os
 import logging
 
 
+logger = logging.getLogger(__name__)
+
+
 def send_email(
     subject: str,
     sender: str,
@@ -27,7 +30,7 @@ def send_email(
     path_dir = RFA_DIR / "python3" / "dm" / "Email_template"
 
     if not path_dir.is_dir():
-        logging.error("Email_Template folder not found.")
+        logger.error("Email_Template folder not found.")
         return 1
 
     # Map command to its respective html template
