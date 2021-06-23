@@ -578,8 +578,17 @@ class TableParser:
                 continue
 
             values = tuple(row.values())
-            found_headers = found_headers or values == headers
-            found_first_row = found_headers and separators and values == separators
+            if not found_headers:
+                found_headers = True
+                for header in headers:
+                    if header not in values:
+                        found_headers = False
+                        break
+            if values[0].startswith('-'):
+                if found_headers:
+                    found_first_row = True
+                else:
+                    raise Exception(f"Cound not find the headers for {cls.COMMAND}.")
 
     @classmethod
     def _post_process_row(cls, row: Row) -> Row:
@@ -624,7 +633,7 @@ class AreaParser(TableParser):
 
     COMMAND = ["sda", "ls", "-area", "-report", "verbose"]
     KEYS_HEADERS = dict(
-        # name="Development Area", # added name as first in the order, but in sda ls its second
+        #name="Development Area", # Uncomment this for testing and comment name below sles12 added name as first in the order, but in sda ls its second
         development="Development",
         # if the sequence is matching with the output of COMMAND, it stores the right value into .cfg file
         name="Development Area",
