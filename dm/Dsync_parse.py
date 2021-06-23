@@ -4,10 +4,15 @@
         import dm
 """
 import argparse
+import datetime
+import os
 import re
-from typing import Dict, List
+import sys
+from pathlib import Path
+from typing import Dict, List, Tuple
 
 import log
+import dm
 
 LOGGER = log.getLogger(__name__)
 
@@ -67,7 +72,7 @@ def parse_value_response(kv_list: List, value: str) -> Dict:
     """parse the value response from DesignSync, the key must be checked to
     see how to parse the data"""
     key = "" if not kv_list else kv_list[-1]
-    if key == "comment" or key == "mtime" or key == "date":
+    if key == "comment" or key == "mtime" or key == "date" or key == "name":
         parse_func = str
     elif key == "objects":
         parse_func = parse_list_kv_response
@@ -173,11 +178,12 @@ def process_sitr_update_list(self, resp_list: List[str]) -> List:
             new_item = settings
             new_item["module"] = root_mod
             new_item["date"] = int(settings["date"])
-            prev_date = update_list[root_mod]["date"] if root_mod in update_list else 0
+            prev_date = (
+                update_list[root_mod]["date"] if root_mod in update_list else 0
+            )
             if new_item["date"] > prev_date:
                 update_list[root_mod] = new_item
     return update_list
-
 
 def parse_sitr_modules(resp) -> Dict:
     """return the SITaR modules and their status"""
@@ -192,7 +198,6 @@ def parse_sitr_modules(resp) -> Dict:
             modules[first_item[:-2]] = dict(zip(keys, items[1:]))
     return modules
 
-
 def process_sitr_update_list(resp_list: List[str]) -> List:
     """get a list of newly submitted modules that can be integrated"""
     resp_str = " ".join([resp.split("\n")[0] for resp in resp_list])
@@ -206,7 +211,9 @@ def process_sitr_update_list(resp_list: List[str]) -> List:
             new_item = settings
             new_item["module"] = root_mod
             new_item["date"] = int(settings["date"])
-            prev_date = update_list[root_mod]["date"] if root_mod in update_list else 0
+            prev_date = (
+                update_list[root_mod]["date"] if root_mod in update_list else 0
+            )
             if new_item["date"] > prev_date:
                 update_list[root_mod] = new_item
     return update_list
@@ -250,3 +257,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
