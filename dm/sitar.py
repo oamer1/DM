@@ -580,10 +580,16 @@ class TableParser:
             values = tuple(row.values())
             if not found_headers:
                 found_headers = True
+                # Make sure that all header keys are found in any order
                 for header in headers:
                     if header not in values:
                         found_headers = False
                         break
+                if found_headers:
+                    # Fix up the fieldnames to match the order of values
+                    reader.fieldnames = [ \
+                        list(cls.KEYS_HEADERS.keys())[list(cls.KEYS_HEADERS.values()).index(val)] \
+                        for val in values]
             if values[0].startswith('-'):
                 if found_headers:
                     found_first_row = True
@@ -1028,7 +1034,7 @@ def make_ws(args: argparse.Namespace, config: ConfigParser) -> int:
     if run_post:
         post_ws_builder(config, args, ws, "is ready")
         # Setup workspace to ensure files are latest versions
-        setup_shell(ws_path=ws.work_dir, cmd="python -m dm setup_ws")
+        setup_shell(ws_path=ws.work_dir, cmd="python -m dm setup_ws", shell_flag=True)
     return 0
 
 
