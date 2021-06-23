@@ -478,7 +478,8 @@ def setup_netlist_args(parser):
 @command(setup=setup_netlist_args)
 def netlist(cad, args: argparse.Namespace) -> int:
     """Run a netlist from the config"""
-    netlists = dm.get_netlist_info()
+    parsed_xml = dm.parse_xml()
+    netlists = parsed_xml.get_netlist_info()
     if args.show:
         LOGGER.info(
             f"The following configs are defined in the project.xml file: {' '.join(netlists)}"
