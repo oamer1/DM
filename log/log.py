@@ -10,6 +10,7 @@ import logging.handlers
 import os
 import sys
 from pathlib import Path
+from PyQt5.QtWidgets import QTextBrowser
 
 # Default filename of the log file.
 
@@ -107,6 +108,21 @@ def call_arguments() -> None:
             {k: str(v) for k, v in caller_frame[1][0].f_locals.items() if k != "self"}
         ),
     )
+
+
+class GUILogHandler(logging.Handler):
+    """logging handler to log to textBrowser_2 object app, used for GUI"""
+
+    def __init__(self, widget: QTextBrowser, logging_level=logging.INFO):
+        super().__init__()
+        self.setLevel(logging_level)
+        self.setFormatter(logging.Formatter(fmt="%(levelname)s: %(message)s"))
+        self.widget = widget
+        self.widget.setReadOnly(True)
+
+    def emit(self, record):
+        msg = self.format(record)
+        self.widget.append(msg)
 
 
 # Convenience shortcuts.
