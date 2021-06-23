@@ -428,10 +428,13 @@ def mk_lib(cad, args: argparse.Namespace) -> int:
     if not libs_to_add:
         LOGGER.warn("No libraries to add")
         return 1
-    if dm.prompt_to_continue():
+    LOGGER.debug(
+        f"Files to check out = {files_to_checkout}, libs = {libs_to_add}"
+    )
+    if dm.Dsync_io.prompt_to_continue(None):
         if cad.checkout_files(files_to_checkout):
             cad.make_cadence_libs(libs_to_add)
-            if dm.prompt_to_continue("Check in files"):
+            if dm.Dsync_io.prompt_to_continue(None,"Check in files"):
                 cad.checkin_libs(libs_to_add)
     return 0
 
@@ -478,8 +481,7 @@ def setup_netlist_args(parser):
 @command(setup=setup_netlist_args)
 def netlist(cad, args: argparse.Namespace) -> int:
     """Run a netlist from the config"""
-    parsed_xml = dm.parse_xml()
-    netlists = parsed_xml.get_netlist_info()
+    netlists = dm.get_netlist_info()
     if args.show:
         LOGGER.info(
             f"The following configs are defined in the project.xml file: {' '.join(netlists)}"
@@ -597,12 +599,13 @@ def setup_submit_args(parser):
         "-c", "--comment", default=None, help="Provide a comment for the action"
     )
     parser.add_argument("--noemail", action="store_true", help="Do not send email")
+    parser.add_argument("-f,--force", action="store_true", help="Force submit and skip checks")
 
 
 @command(setup=setup_submit_args)
 def submit(dssc, args: argparse.Namespace) -> int:
     """Perform a SITaR submit / snapshot submit"""
-    return dssc.submit(args.snap, args.pop, args.comment, args.noemail)
+    return dssc.submit(args.snap, args.pop, args.comment, args.noemail, args.force)
 
 
 def setup_mk_tapeout_ws(parser):
@@ -766,12 +769,13 @@ def setup_int_release_args(parser):
     parser.add_argument(
         "-l", "--local", action="store_true", help="Run locally vs via bsub"
     )
+    parser.add_argument("-f,--force", action="store_true", help="Force release and skip checks")
 
 
 @command(setup=setup_int_release_args)
 def int_release(dssc, args: argparse.Namespace) -> int:
     """Perform a SITaR integrate and release (must be run as Integrator)"""
-    return dssc.int_release(args.comment, args.input, args.noemail)
+    return dssc.int_release(args.comment, args.input, args.noemail, args.force)
 
 
 def setup_release_args(parser):
@@ -782,12 +786,13 @@ def setup_release_args(parser):
     parser.add_argument(
         "-n", "--noemail", action="store_true", help="Do not send email"
     )
+    parser.add_argument("-f,--force", action="store_true", help="Force release and skip checks")
 
 
 @command(setup=setup_release_args)
 def release(dssc, args: argparse.Namespace) -> int:
     """Perform a SITaR release only (must be run as Integrator)"""
-    return dssc.release(args.comment, args.noemail)
+    return dssc.release(args.comment, args.noemail, args.force)
 
 
 def choose_log_file() -> str:
@@ -821,17 +826,19 @@ def jira(dssc, args: argparse.Namespace) -> int:
     """
     Send jira email with subject and comment and an attachment log_file
     """
+    import readline
     subject = ""
     comment = ""
-    JIRA_EMAILS = ("email1@jira_example.com", "email2@jira_example.com")
+    JIRA_EMAILS = ("dmrfa.help", "wtf.help")
 
-    print("Type quit or q to exit command at any stage.")
+    print("\nType quit or q to exit command at any stage. \n")
     log_file = choose_log_file()
 
-    subject = dm.ask_string_input("Please enter subject: ")
-    comment = dm.ask_string_input("Please enter comment: ")
+    subject = dm.ask_string_input(" \nPlease enter subject: ")
+    comment = dm.ask_string_input(" \nPlease enter comment: ")
 
     # Ask user for email to send jira
+    print("\nChoose DMRFA.help if you want to create a DM ticket." '\n' "Choose WTF.help if you have issue while executing any script within wtf shell. \n")
 
     for index, email in enumerate(JIRA_EMAILS, 1):
         option = f"{index} : {email}"
@@ -840,7 +847,7 @@ def jira(dssc, args: argparse.Namespace) -> int:
     option_index = dm.ask_option_number(len(JIRA_EMAILS))
     email = JIRA_EMAILS[option_index]
 
-    LOGGER.debug(
+    LOGGER.info(
         f"JIRA Email sent with subject={subject}, comment={comment}, email={email}, logfile={log_file}"
     )
     return dssc.jira(
@@ -1028,7 +1035,7 @@ def run_intshell_with_args(args, dssc) -> int:
         if args.request_branch:
             email = None
             if not args.noemail:
-                email = "mgajjar"  # This will generate a JIRA ticket
+                email = "dmrfa.help"  # This will generate a JIRA ticket
                 LOGGER.info("Using email: %s", email)
             dssc.request_branch(args.version, args.comment, email)
         if args.mk_branch:
@@ -1093,9 +1100,7 @@ def run_with_args(args) -> int:
             return exit_code
 
     if args.command in ("mk_tapeout_ws"):
-        config = sitar.get_config()
-        ws = sitar.init_ws_builder(config, args.dev_name, args.ws_name)
-        ws.create_shared_ws(args.ws_name)
+        dssc.mk_tapeout_ws_sitar()
 
     # Relaunch the DM shell as the integrator
     if args.command in ("mk_release", "request_branch", "mk_branch"):
