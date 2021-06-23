@@ -12,16 +12,21 @@
 import argparse
 import datetime
 import os
+import re
+import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
-import log
-import pandas as pd
+
 import tabulate
 
-LOGGER = log.getLogger(__name__)
+import pandas as pd
 
+import log
+import dm
+
+LOGGER = log.getLogger(__name__)
 
 class Dsync_io(object):
     """Class for accessing Design Sync IO routines
@@ -33,7 +38,7 @@ class Dsync_io(object):
     """
 
     # Methods to initialize the Class
-    def __init__(self, test_mode=False) -> None:
+    def __init__(self, test_mode = False) -> None:
         """Initializer for the Dsync_io class"""
         self.table = {}
         self.test_mode = test_mode
@@ -53,7 +58,10 @@ class Dsync_io(object):
             print(tabulate.tabulate(self.table, headers="keys", tablefmt="pretty"))
             print()
 
-    def display_module_hrefs(self, rows: List[str], fname: str = "") -> None:
+    def display_module_hrefs(
+        self,
+        rows: List[str], fname: str = ""
+    ) -> None:
         """show the hrefs of the modules, or use the top module if not specified"""
         if fname:
             if self.test_mode:
@@ -180,7 +188,7 @@ class Dsync_io(object):
 
     def prompt_to_continue(self, msg: str = "Continue") -> bool:
         """prompt the user to continue"""
-        if self.test_mode:
+        if self and self.test_mode:
             return self.resp.pop(0)
         if bool(os.environ.get("FORCE_CONTINUE", 0)) is True:
             return True
@@ -207,9 +215,7 @@ class Dsync_io(object):
         select_list = [
             item.split("@") for item in self.contents.splitlines() if "@" in item
         ]
-        return {
-            item[0]: {"module": item[0], "tagName": item[1]} for item in select_list
-        }
+        return {item[0]: {"module": item[0], "tagName": item[1]} for item in select_list}
 
 
 def main():
@@ -242,7 +248,7 @@ def main():
 
         doctest.testmod()
 
-    io = Dsync_io(test_mode=args.test_mode)
+    io = Dsync_io(test_mode = args.test_mode)
 
     if args.interactive:
         import IPython  # type: ignore
@@ -252,3 +258,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
