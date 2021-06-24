@@ -15,7 +15,7 @@ class TimedFileHandler(logging.FileHandler):
     ):
         self.backup_count = backupCount
         self.filename = self.get_name(filename, date_pattern)
-        self.delete()
+        self.rotate()
         super().__init__(filename=self.filename, mode=mode)
 
     def get_name(self, log_name, date_pattern):
@@ -33,7 +33,7 @@ class TimedFileHandler(logging.FileHandler):
         logfiles.sort(key=lambda e: e.stat().st_mtime, reverse=True)
         return logfiles
 
-    def delete(self):
+    def rotate(self):
         """
         Deletes old log files when they exceed backup_count
         """
