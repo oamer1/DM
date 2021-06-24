@@ -67,15 +67,9 @@ def find_sitr_root_dir(dir: str = "") -> "Path":
     while path.parents:
         if path.stem == top:
             return path.parent
-        if (
-            Path(path / ".cshrc.project").exists()
-            and Path(path / ".shrc.project").exists()
-        ):
+        if Path(path / ".cshrc.project").exists() and Path(path / ".shrc.project").exists():
             return path
-        if (
-            Path(path / user / ".cshrc.project").exists()
-            and Path(path / user / ".shrc.project").exists()
-        ):
+        if Path(path / user / ".cshrc.project").exists() and Path(path / user / ".shrc.project").exists():
             return path
         path = path.parent
     return path
@@ -166,7 +160,7 @@ class Sitar_dm(dm.Dsync_dm):
             first_item = next(iter(items), "")
             if "%" in first_item:
                 mod_name = first_item[:-2]
-                modules[mod_name] = dict(zip(keys, items[1:4] + [" ".join(items[4:])]))
+                modules[mod_name] = dict(zip(keys, items[1:4] + [' '.join(items[4:])]))
                 LOGGER.debug(f"found sitr mod {mod_name} = {modules[mod_name]}")
         return modules
 
@@ -240,29 +234,29 @@ class Sitar_dm(dm.Dsync_dm):
         LOGGER.debug(f"sitr submit of {modules}")
         for mod in modules:
             resp = self.stclc_sitr_submit(mod, comment, skipcheck)
-
-            if resp:
+            status = self.stclc_puts_resp()
+            vers[mod] = resp.partition("Tagging:")[-1]
+            LOGGER.debug(f"sitr submit {mod}, resp = {resp}, vers = {vers[mod]}")
+            if status:
                 errors[mod] = resp
-                vers[mod] = resp.partition("Tagging:")[-1]
-                LOGGER.debug(f"sitr submit {mod}, resp = {resp}, vers = {vers[mod]}")
 
         if errors:
             for mod in errors:
                 LOGGER.info(f"submit module {mod} - {errors[mod]}")
-
-            if email is not None:
-                for mod in vers:
-                    ver = vers[mod].partition(" : Added")[-1].splitlines()[0].strip()
-                    content = {
-                        "mod": mod,
-                        "mods": ",".join(modules),
-                        "user": os.environ.get("USER", "nobody"),
-                        "ver": ver,
-                        "comment": comment,
-                        "skipcheck": skipcheck,
-                    }
-                    self.email_command_output(email, f"submit {mod}", content, "submit")
             return True
+
+        if email is not None:
+            for mod in vers:
+                ver = vers[mod].partition(" : Added")[-1].splitlines()[0].strip()
+                content = {
+                    "mod": mod,
+                    "mods": ",".join(modules),
+                    "user": os.environ.get("USER", "nobody"),
+                    "ver": ver,
+                    "comment": comment,
+                    "skipcheck": skipcheck,
+                }
+                self.email_command_output(email, f"submit {mod}", content, "submit")
         return False
 
     # TODO - need to be able to accept a list of modules to run
@@ -282,9 +276,7 @@ class Sitar_dm(dm.Dsync_dm):
             else:
                 selector = sitr_mods[mod]["selector"]
                 if selector[0].isdigit():
-                    LOGGER.error(
-                        f"Invalid selector {selector} for {mod}. Please do a sitr pop"
-                    )
+                    LOGGER.error(f"Invalid selector {selector} for {mod}. Please do a sitr pop")
                     return {}
                 mod_list[mod] = {"module": mod, "tagName": selector}
         if self.check_for_submit_errors(modules_to_submit):
@@ -305,6 +297,10 @@ class Sitar_dm(dm.Dsync_dm):
         email=None,
     ) -> bool:
         """Create a branch of the current top module"""
+        if re.match(r'.*v\d\.\d+$', version):
+            LOGGER.error(f"invalid version ({version}), cannot end with a version number")
+            return True
+
         url = self.dssc_get_root_url(branch=version)
         if self.stclc_mod_exists(url):
             LOGGER.warn(f"The DSync module ({url}) already esists")
@@ -358,6 +354,10 @@ class Sitar_dm(dm.Dsync_dm):
         """branch all of the modules with the versions specified by mod_list"""
         branches = []
         errors = False
+        if re.match(r'.*v\d\.\d+$', version):
+            LOGGER.error(f"invalid version ({version}), cannot end with a version number")
+            return {}
+
         # TODO - do we need to branch submodules?
         for mod in sitr_mods:
             if mod not in mod_list:
@@ -389,9 +389,7 @@ class Sitar_dm(dm.Dsync_dm):
                 "module": branch["module"],
                 "tagName": f"{version}_v1.1",
             }
-            LOGGER.debug(
-                f"adding {branch} - tag = {version}_v1.1, url = {url}, branched = {branched_url}"
-            )
+            LOGGER.debug(f"adding {branch} - tag = {version}_v1.1, url = {url}, branched = {branched_url}")
         if errors:
             return {}
         return mod_list
@@ -595,9 +593,7 @@ class Sitar_dm(dm.Dsync_dm):
             path = sitr_mods[mod]["relpath"]
             selector = sitr_mods[mod]["selector"]
             args = f'-rec -immutable -comment "{comment}"'
-            LOGGER.debug(
-                f"Using snapshot tag {snap_tag} for module {mod}, selector = {selector}, path = {path}"
-            )
+            LOGGER.debug(f"Using snapshot tag {snap_tag} for module {mod}, selector = {selector}, path = {path}")
             hrefs = self.dssc_get_hrefs(mod)
             if hrefs:
                 args += f" -filter {','.join([x['relpath'] for x in hrefs])}"
@@ -709,24 +705,24 @@ class Sitar_dm(dm.Dsync_dm):
         sitr_modules: List[str],
         modules: List[str],
         comment: str,
+        skip_check: bool = False,
         email=None,
     ) -> bool:
         """Runs a normal submit or a snapshot submit, depending on args"""
-        skipcheck = False
+        skipcheck = skip_check
         if tag and populate:
             LOGGER.error("Cannot use -n TAG with --pop!")
             return True
-        if self.check_for_submit_errors(modules):
-            # TODO - raise exception?
-            return True
         if populate:
             # First populate, then normal submit
-            # TODO - add in the skip check
             self.dssc_pop_modules(modules=modules)
             # TODO - do this all of the time?
             self.dssc_checkin_module(modules, comment)
             skipcheck = True
         elif tag:
+            if self.check_for_submit_errors(modules):
+                # TODO - raise exception?
+                return True
             # Run snapshot submit only
             return self.snapshot_submit_module(sitr_modules, modules, tag, comment)
         return self.submit_module(modules, comment, skipcheck, email=email)
@@ -756,9 +752,7 @@ class Sitar_dm(dm.Dsync_dm):
         kv_resp = dm.parse_kv_response(f"{resp_str}")
         for url, settings in kv_resp.items():
             (base_url, selector) = url.split("@")
-            LOGGER.debug(
-                f"lookup found {base_url} {selector}, only allow {allowed_prefixes}"
-            )
+            LOGGER.debug(f"lookup found {base_url} {selector}, only allow {allowed_prefixes}")
             if any(selector.startswith(p) for p in allowed_prefixes) and re.search(
                 r"v\d\.\d+$", selector
             ):
@@ -782,10 +776,14 @@ class Sitar_dm(dm.Dsync_dm):
             for module, mod in mod_list.items():
                 module_name = mod["module"]
                 module_tag = mod["tagName"]
-                LOGGER.info(f"Integrating mod {module_name} with tag {module_tag}")
-                if self.stclc_add_sitr_mod(module_name, module_tag):
-                    # TODO - raise exception?
+                if module_tag[0].isdigit() or module_tag.endswith(':'):
+                    LOGGER.error(f"Invalid version {module_tag} for {module_name}")
                     errors.append(module_name)
+                else:
+                    LOGGER.info(f"Integrating mod {module_name} with tag {module_tag}")
+                    if self.stclc_add_sitr_mod(module_name, module_tag):
+                        # TODO - raise exception?
+                        errors.append(module_name)
         if errors:
             # TODO - raise exception?
             LOGGER.warn(
@@ -846,7 +844,7 @@ class Sitar_dm(dm.Dsync_dm):
             print(f"\nERRORS:\n\n{errors}\n")
 
         return 0
-
+  
     # TODO - move to Email
     def email_command_output(
         self,

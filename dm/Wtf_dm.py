@@ -51,8 +51,7 @@ class Wtf_dm(dm.Sitar_dm):
 
     @property
     def email(self):
-        parsed_xml = dm.parse_xml()
-        email = parsed_xml.get_email(user=getpass.getuser())
+        email = dm.get_email(Path(os.environ["QC_CONFIG_DIR"]), user=getpass.getuser())
         return email
 
     def wtf_get_sitr_modules(self, given_mods: List, only_update: bool = False):
@@ -83,6 +82,7 @@ class Wtf_dm(dm.Sitar_dm):
             self.modules.append(mod)
         if not self.modules:
             self.modules = self.sitr_mods
+        LOGGER.debug(f"Module list = {' '.join(self.modules)}")
 
     def populate(self, force: bool = False) -> int:
         """Populate a SITaR workspace"""
@@ -215,15 +215,16 @@ class Wtf_dm(dm.Sitar_dm):
         return 0
 
     def submit(
-        self, tag: str = "", pop: bool = False, comment: str = "", noemail: bool = False
+        self, tag: str = "", pop: bool = False, comment: str = "", noemail: bool = False, force: bool = False
     ) -> int:
         """Perform a SITaR submit / snapshot submit"""
         email = None
         if not noemail:
             email = self.email
 
+        LOGGER.debug(f"running a sitr submit on {self.modules}")
         return self.sitr_submit(
-            pop, tag, self.sitr_mods, self.modules, comment, email=email
+            pop, tag, self.sitr_mods, self.modules, comment, email=email, skip_check=force
         )
 
     def mk_tapeout_ws(self, tag: str = "") -> int:
@@ -238,6 +239,13 @@ class Wtf_dm(dm.Sitar_dm):
         self.ws_name = tag
         self.dev_name = self.get_ws_devname()
         self.make_tapeout_ws(self.sitr_mods, tag)
+        return 0
+
+    def mk_tapeout_ws_sitar(self, tag: str = "") -> int:
+        """call the sitar script to make the tapeout workspace"""
+        config = sitar.get_config()
+        ws = sitar.init_ws_builder(config, self.dev_name, self.ws_name)
+        ws.create_shared_ws(args.ws_name)
         return 0
 
     def request_branch(self, version: str, comment: str, email=None) -> int:
@@ -352,7 +360,7 @@ class Wtf_dm(dm.Sitar_dm):
                 self.sitr_integrate(mod_list)
         return 0
 
-    def int_release(self, comment: str, fname: str = "", noemail: bool = False) -> int:
+    def int_release(self, comment: str, fname: str = "", noemail: bool = False, force: bool = False) -> int:
         """Perform a SITaR integrate and release (must be run as Integrator)"""
         if fname:
             mod_list = read_mod_versions(fname)
@@ -368,30 +376,30 @@ class Wtf_dm(dm.Sitar_dm):
         if not noemail:
             email = self.email
 
-        return self.sitr_release(comment, email=email)
+        return self.sitr_release(comment, email=email, skip_check=force)
 
-    def release(self, comment: str, noemail: bool = False) -> int:
+    def release(self, comment: str, noemail: bool = False, force: bool = False) -> int:
         """Perform a SITaR release only (must be run as Integrator)"""
         email = None
         if not noemail:
             email = self.email
 
-        return self.sitr_release(comment, email=email)
+        return self.sitr_release(comment, email=email, skip_check=force)
 
-    def diag_basic_checks(self) -> bool:
-        """Perform some basic diag checks and return True for a bad error"""
+    def diag_basic_checks(self, interactive: bool = True) -> List[str]:
+        """Perform some basic diag checks and return a list of errors"""
         if not self.sitr_mods:
-            LOGGER.error("No SITaR modules found.")
-            return True
+            return ["No SITaR modules found."]
         root_dir = self.stclc_get_url_root_dir(self)
         # TODO - why does this not work?
         # if root_dir != os.environ['SYNC_DEVAREA_DIR']:
         #    LOGGER.error(f"Invalid url root {root_dir}, should be {os.environ['SYNC_DEVAREA_DIR']}.")
         #    #return True
-        return False
+        return []
 
-    def diag_module_checks(self, interactive: bool = True) -> bool:
-        """scan through all dsync modules and return True for a bad error"""
+    def diag_module_checks(self, interactive: bool = True) -> List[str]:
+        """scan through all dsync modules and return a list of errors"""
+        errors = []
         mod_list = []
         mods = self.dssc_get_all_modules()
         for mod in mods:
@@ -402,18 +410,16 @@ class Wtf_dm(dm.Sitar_dm):
                         continue
                     self.stclc_rmfile(mod["modinstname"])
             if mod["name"] in mod_list:
-                LOGGER.error(f"The module {mod['name']} is defined multiple times.")
+                errors.append(f"The module {mod['name']} is defined multiple times.")
             else:
                 mod_list.append(mod["name"])
         if not mods:
-            LOGGER.error("No Design Sync modules found.")
-            return True
+            errors.append("No Design Sync modules found.")
         if not os.environ["SYNC_DEVAREA_TOP"] in mod_list:
-            LOGGER.error(
+            errors.append(
                 f'The top container module {os.environ["SYNC_DEVAREA_TOP"]} was not found.'
             )
-            return True
-        return False
+        return errors
 
     def diag_check_bad_sitr_module(self, mod: str, interactive: bool = True) -> bool:
         """if the status of the module is bad, then fix it up, return True if a fix was done"""
@@ -483,28 +489,42 @@ class Wtf_dm(dm.Sitar_dm):
                     comment=comment,
                     email=self.diag_JIRA_Email,
                 )
-                print("Not supported yet")
+                print("JIRA Ticket Opened Successfully")
 
     def diag_check_for_unmanaged_view(
         self, relpath: "Path", abspath: "Path", interactive: bool = True
-    ) -> bool:
+    ) -> None:
         """Scan for unmanaged cadence views with contents that are symlinks"""
+        import shutil
+
         files = self.dssc_ls_modules(relpath, unmanaged=True)
+        bad_files = []
+        symlinks = []
         for file in files:
             if file["name"].endswith(".sync.cds"):
                 path = abspath / file["name"][:-9]
                 for item in path.iterdir():
-                    if item.endswith(".oa-") or item.endswith(".oa%"):
-                        LOGGER.error(f"Bad file found in cadence view ({item}).")
-                        if interactive and self.io.prompt_to_continue(
-                            f"Remove the file"
-                        ):
-                            item.unlink()
+                    if str(item).endswith(".oa-") or str(item).endswith(".oa%"):
+                        bad_files.apend(item)
                     elif item.is_symlink():
-                        LOGGER.error(
-                            f"The view {file['name']} is unmanaged but has a symlink ({item})."
-                        )
-                        # TODO - should fix this
+                        symlinks.apend(item)
+        for file in bad_files:
+            LOGGER.error(f"Bad file found in cadence view ({file}).")
+            if interactive and self.io.prompt_to_continue(
+                f"Remove the file"
+            ):
+                file.unlink()
+        for file in symlinks:
+            LOGGER.error(
+                f"The cadence view is unmanaged but has a symlink ({file})."
+            )
+            if interactive and self.io.prompt_to_continue(
+                f"Unlink the file"
+            ):
+                temp_file = Path(f"{file}.tmp")
+                shutil.copy2(file, temp_file)
+                file.unlink()
+                temp_file.rename(file)
 
     def diag_get_dirlist(self, path: "Path") -> List["Path"]:
         """Return a list of directories below the specified starting path"""
@@ -523,18 +543,36 @@ class Wtf_dm(dm.Sitar_dm):
         import stat
 
         exp_gid = Path(os.environ["SYNC_DEVAREA_DIR"]).stat().st_gid
+        exp_group = Path(os.environ["SYNC_DEVAREA_DIR"]).group()
         for dir in self.diag_get_dirlist(abspath):
             if not dir.stat().st_mode & stat.S_IWGRP:
                 LOGGER.error(f"The directory {dir} is not group writable.")
-                # TODO - should fix this
+                if interactive and self.io.prompt_to_continue(
+                    f"Fix up the permissions"
+                ):
+                    dir.chmod(dir.stat().st_mode | stat.S_IWGRP)
             if not dir.stat().st_mode & stat.S_IRGRP:
                 LOGGER.error(f"The directory {dir} is not group readable.")
-                # TODO - should fix this
+                if interactive and self.io.prompt_to_continue(
+                    f"Fix up the permissions"
+                ):
+                    dir.chmod(dir.stat().st_mode | stat.S_IRGRP)
             if not dir.stat().st_mode & stat.S_ISGID:
                 LOGGER.error(
                     f"The directory {dir} does not have the group sticky bit set."
                 )
-                # TODO - should fix this
+                if interactive and self.io.prompt_to_continue(
+                    f"Fix up the permissions"
+                ):
+                    dir.chmod(dir.stat().st_mode | stat.S_ISGID)
+            if dir.stat().st_gid != exp_gid:
+                LOGGER.error(
+                    f"The directory {dir} does not belong to the correct group ({exp_group})."
+                )
+                if interactive and self.io.prompt_to_continue(
+                    f"Fix up the group"
+                ):
+                    os.chown(dir, -1, exp_gid)
 
     def diag_fix_up_overlaps(
         self, overlaps: List, relpath: "Path", interactive: bool = True
@@ -562,7 +600,7 @@ class Wtf_dm(dm.Sitar_dm):
 
     def diag_parse_pop_logfile(
         self, fname: "Path", relpath: "Path", interactive: bool = True
-    ) -> None:
+    ) -> bool:
         """parse a logfile from populate and fix issues and report errors"""
         contents = fname.read_text()
         overlap_def = re.compile(
@@ -573,6 +611,7 @@ class Wtf_dm(dm.Sitar_dm):
         overlaps = []
         errors = []
         parse = False
+        re_pop = False
         for line in contents.splitlines():
             if "WARNINGS and FAILURES LISTING" in line:
                 parse = True
@@ -595,14 +634,14 @@ class Wtf_dm(dm.Sitar_dm):
                 if interactive:
                     if not self.io.prompt_to_continue(f"Remove the Href"):
                         continue
-                self.stclc_rmfolder(file)
-                # TODO - need to repopulate?
+                    self.stclc_rmfolder(file)
+                    re_pop = True
                 continue
             if "Error:" in line:
                 errors.append(line)
             elif "Failed" in line:
                 errors.append(line)
-        self.diag_fix_up_overlaps(overlaps, relpath)
+        self.diag_fix_up_overlaps(overlaps, relpath, interactive)
         if errors:
             for err in errors:
                 LOGGER.error(err)
@@ -615,7 +654,8 @@ class Wtf_dm(dm.Sitar_dm):
                     comment=f"Errors: {comment}",
                     email=self.diag_JIRA_Email,
                 )
-                print("Not supported yet")
+                print("JIRA Ticket Opened Successfully")
+        return re_pop
 
     def diag_check_pop_module(
         self, mod: str, relpath: "Path", interactive: bool = True
@@ -630,18 +670,47 @@ class Wtf_dm(dm.Sitar_dm):
         if not fname.exists():
             LOGGER.info(f"The output logfile {fname} was not created")
             return
-        self.diag_parse_pop_logfile(fname, relpath, interactive)
+        if self.diag_parse_pop_logfile(fname, relpath, interactive):
+            self.stclc_populate(mod)
 
-    def diag_check_for_sync_module(self, mod: str, interactive: bool = True) -> bool:
+    def diag_check_for_sync_module(self, mod: str, abspath: 'Path', interactive: bool = True) -> bool:
         """check modules that are in-sync and make sure they are cached"""
-        # if not mod == 'SIM_DATA' and not abspath.is_symlink():
-        #    LOGGER.warn(f"The sitr module {mod} at {self.sitr_mods[mod]['relpath']} not a symlink.")
+        if not mod == 'SIM_DATA' and not abspath.is_symlink():
+            LOGGER.warn(f"The sitr module {mod} at {self.sitr_mods[mod]['relpath']} not a symlink.")
         # if interactive:
         #    # TODO - check the mcache
         #    if not self.io.prompt_to_continue(f"Restore the {mod} module"):
         #        continue
         #    LOGGER.info(f"Restoring {mod} to version {self.sitr_mods[mod]['baseline']}")
         #    self.stclc_update_module(mod, self.sitr_mods[mod]["baseline"])
+
+    def diag_sitr_modules(
+        self,
+        interactive: bool = True,
+        do_pop: bool = False,
+        do_scan: bool = False,
+        do_perf: bool = False,
+    ) -> None:
+        """Run diagnostics on the selected sitar modules"""
+        for mod in self.modules:
+            relpath = Path(self.sitr_mods[mod]["relpath"])
+            abspath = Path(os.environ["DSGN_PROJ"]) / relpath
+            if self.diag_check_bad_sitr_module(mod, interactive):
+                continue
+            elif self.sitr_mods[mod]["status"] == "Update mode":
+                if self.diag_check_for_update_mode(mod, abspath, interactive):
+                    continue
+                if do_scan:
+                    LOGGER.info(f"Scanning the module {mod}.")
+                    self.diag_check_for_modified_not_locked(mod, interactive)
+                    self.diag_check_for_unmanaged_view(relpath, abspath, interactive)
+                    self.diag_check_for_permissions(abspath, interactive)
+                    # TODO - scan for cadence libraries that are missing key files
+                    # TODO - how to check if something is unmanaged but has symlinks and is really checked in
+                if do_pop:
+                    self.diag_check_pop_module(mod, relpath, interactive)
+            else:
+                self.diag_check_for_sync_module(mod, abspath, interactive)
 
     def diag(
         self,
@@ -650,30 +719,25 @@ class Wtf_dm(dm.Sitar_dm):
         do_scan: bool = False,
         do_perf: bool = False,
     ) -> bool:
-        """Run diagnostics on the modules specified"""
-        if self.diag_basic_checks():
+        """Run diagnostics on the workspace and modules specified"""
+        errors = self.diag_basic_checks()
+        errors.extend(self.diag_module_checks(interactive))
+        if errors:
+            for err in errors:
+                LOGGER.error(err)
+            if interactive and self.io.prompt_to_continue(
+                f"File a JIRA with dmrfa.help"
+            ):
+                comment = ", ".join(errors)
+                self.jira(
+                    subject="Error running diagnostics, diag command.",
+                    comment=f"Errors: {comment}",
+                    email=self.diag_JIRA_Email,
+                )
+                print("JIRA Ticket Opened Successfully")
             return True
-        if self.diag_module_checks(interactive):
-            return True
-
-        # Scan through the specified modules
-        for mod in self.modules:
-            if self.diag_check_bad_sitr_module(mod, interactive):
-                continue
-            elif self.sitr_mods[mod]["status"] == "Update mode":
-                relpath = Path(self.sitr_mods[mod]["relpath"])
-                abspath = Path(os.environ["DSGN_PROJ"]) / relpath
-                if self.diag_check_for_update_mode(mod, abspath, interactive):
-                    continue
-                if do_scan:
-                    LOGGER.info(f"Scanning the module {mod}.")
-                    self.diag_check_for_modified_not_locked(mod, interactive)
-                    self.diag_check_for_unmanaged_view(relpath, abspath, interactive)
-                    self.diag_check_for_permissions(abspath, interactive)
-                if do_pop:
-                    self.diag_check_pop_module(mod, relpath, interactive)
-            else:
-                self.diag_check_for_sync_module(mod, interactive)
+        self.diag_sitr_modules(interactive, do_pop, do_scan)
+        return False
 
     def wtf_set_dev_dir(self):
         self.force_version(self.dev_dir)
