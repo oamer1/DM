@@ -1,6 +1,8 @@
 """The logging package"""
 
 from log.log import *
+from log.CustomTimedFileHandler import TimedFileHandler
+
 
 __all__ = [
     "log",
