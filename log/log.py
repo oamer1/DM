@@ -43,13 +43,6 @@ def configure(
     Configure logging subsystem. This should be called automatically on
     importing this module.
     """
-    logging.basicConfig(
-        filename=Path(filename),
-        filemode="a",
-        format=format,
-        datefmt=datefmt,
-        level=logging.DEBUG,
-    )
 
     # Rotate logs after 20 runs
     handler = logging.handlers.RotatingFileHandler(filename, backupCount=20)
