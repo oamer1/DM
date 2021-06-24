@@ -1,11 +1,12 @@
 import logging
 from datetime import datetime
 from pathlib import Path
+from PyQt5.QtWidgets import QTextBrowser
 
 
 class TimedFileHandler(logging.FileHandler):
     """
-    Custom FileHandler that deletes any logfiles in directory more than
+    Custom FileHandler that rotates logfiles in directory more than
     backupCount
     """
 
@@ -40,3 +41,18 @@ class TimedFileHandler(logging.FileHandler):
         if len(all_logfiles) >= self.backup_count:
             for file in all_logfiles[self.backup_count - 1 :]:
                 file.unlink()
+
+
+class GUILogHandler(logging.Handler):
+    """logging handler to log to textBrowser_2 object app, used for GUI"""
+
+    def __init__(self, widget: QTextBrowser, logging_level=logging.INFO):
+        super().__init__()
+        self.setLevel(logging_level)
+        self.setFormatter(logging.Formatter(fmt="%(levelname)s: %(message)s"))
+        self.widget = widget
+        self.widget.setReadOnly(True)
+
+    def emit(self, record):
+        msg = self.format(record)
+        self.widget.append(msg)

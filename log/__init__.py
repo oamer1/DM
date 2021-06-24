@@ -1,7 +1,7 @@
 """The logging package"""
 
 from log.log import *
-from log.CustomTimedFileHandler import TimedFileHandler
+from log.CustomLogHandlers import TimedFileHandler, GUILogHandler
 
 
 __all__ = [
