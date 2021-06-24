@@ -10,6 +10,7 @@ import logging.handlers
 import os
 import sys
 from pathlib import Path
+from log import TimedFileHandler
 
 # Default filename of the log file.
 
@@ -45,12 +46,11 @@ def configure(
     """
 
     # Rotate logs after 20 runs
-    handler = logging.handlers.RotatingFileHandler(filename, backupCount=20)
+    handler = TimedFileHandler(filename, backupCount=20)
     handler.setLevel(logging.DEBUG)
     file_formatter = logging.Formatter(fmt=format, datefmt=datefmt)
     handler.setFormatter(file_formatter)
     ROOT.addHandler(handler)
-    handler.doRollover()
 
     # Log both to file and console
     console_handler = logging.StreamHandler()
